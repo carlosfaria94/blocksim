@@ -12,8 +12,7 @@ setup(
     keywords="blocksim blockchain simulation discrete-event ethereum",
     url="https://blockbird.studio",   # project home page, if any
     project_urls={
-        "Bug Tracker": "https://bugs.example.com/HelloWorld/",
-        "Documentation": "https://docs.example.com/HelloWorld/",
-        "Source Code": "https://code.example.com/HelloWorld/",
+        "Bug Tracker": "https://github.com/BlockbirdStudio/blocksim/issues",
+        "Source Code": "https://github.com/BlockbirdStudio/blocksim",
     }
 )
