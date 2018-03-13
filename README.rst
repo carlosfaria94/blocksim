@@ -1,5 +1,5 @@
 ========
-Blocksim
+BlockSim
 ========
 
 A discrete event **Blockchain Simulator**.
