@@ -42,11 +42,14 @@ class Block:
 
     def __str__(self):
         """Returns a readable representation of the block"""
-        return f'''<{self.__class__.__name__}(#{self.number} prevhash:{self.prevhash} tx_list_root:{self.tx_list_root} timestamp:{self.timestamp} nonce:{self.nonce})>'''
+        return f'<{self.__class__.__name__}(#{self.number} prevhash:{self.prevhash} tx_list_root:{self.tx_list_root} timestamp:{self.timestamp} nonce:{self.nonce})>'
 
     def __eq__(self, other):
         """Two blocks are equal iff they have the same hash."""
         return isinstance(other, Block) and self.hash == other.hash
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __hash__(self):
         return self.hash
