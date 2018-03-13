@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from blocksim.models.network import Connection
+from models.network import Connection
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, size, destination, origin')
 
