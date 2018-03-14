@@ -3,6 +3,7 @@ import simpy
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.block import Block
+from blocksim.models.ethereum.transaction import Transaction
 
 SIM_DURATION = 50
 ENV = simpy.Environment()
@@ -17,9 +18,13 @@ def run_simulation(env):
     block2 = Block()
     print(block1)
     print(repr(block1))
-    print(block2)
+    print(block2.hash)
     print(repr(block2))
     print('blocks are equal?', block1 == block2)
+
+    tx = Transaction(1, 2, 2, 'tt', 2, 'teste')
+    print(tx)
+    print(repr(tx))
 
     node_lisbon = Node(env, network, 'lisbon-address', 'Lisbon', 1)
     node_berlin = Node(env, network, 'berlin-address', 'Berlin', 1)

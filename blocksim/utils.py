@@ -10,6 +10,8 @@ except ImportError:
     def keccak_256(value):
         return _sha3.keccak_256(value).digest()
 
+TT256 = 2 ** 256
+
 def decode_hex(s):
     if isinstance(s, str):
         return bytes.fromhex(s)
