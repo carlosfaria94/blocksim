@@ -1,7 +1,7 @@
-from utils import keccak_256, encode_hex
+from blocksim.utils import keccak_256, encode_hex
 
 class Block:
-    """ Model of a block.
+    """ Defines the block model.
 
     It is only defined the parameters which we think is common across different blockchains.
     Use :attr:`Block.kwargs` to define other parameters for the model.

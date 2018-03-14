@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from models.network import Connection
+from blocksim.models.network import Connection
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, size, destination, origin')
 
@@ -79,9 +79,9 @@ class Node:
 
     def init_connection(self, destination_address):
         """
-        Initiate a connection to the node with `destination_address`, 
-        by creating a new `connection` 
-        
+        Initiate a connection to the node with `destination_address`,
+        by creating a new `connection`
+
         """
         print('At {}: Node {} is initiating a connection with {}'.format(
             self.env.now,
@@ -91,9 +91,9 @@ class Node:
         destination_node = self.network.get_node(destination_address)
         if destination_node is None:
             raise RuntimeError('The node you are trying to connect it is not reachable')
-        
+
         new_connection = Connection(self.env, self, destination_node)
-        
+
         destination_node.receive_connection(new_connection)
 
         self.set_outbound_connections(destination_address, new_connection)

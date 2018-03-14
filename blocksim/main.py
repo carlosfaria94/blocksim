@@ -1,8 +1,8 @@
 import simpy
 
-from models.node import Node
-from models.network import Network
-from models.block import Block
+from blocksim.models.node import Node
+from blocksim.models.network import Network
+from blocksim.models.block import Block
 
 SIM_DURATION = 50
 ENV = simpy.Environment()
@@ -34,5 +34,5 @@ def run_simulation(env):
 
     env.run(until=SIM_DURATION)
 
-if  __name__ == '__main__':
+if __name__ == '__main__':
     run_simulation(ENV)

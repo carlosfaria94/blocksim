@@ -16,7 +16,7 @@ setup(
     description='A discrete event Blockchain simulator',
     license='MIT',
     long_description=README,
-    python_requires='>=3',
+    python_requires='>=3.3',
     keywords='blocksim blockchain simulation discrete-event ethereum',
     url='https://github.com/BlockbirdStudio/blocksim',
     project_urls={
@@ -31,9 +31,15 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering',
     ],
+    entry_points={
+        'console_scripts': [
+            'blocksim = blocksim.main:run_simulation'
+        ]
+    },
 )
