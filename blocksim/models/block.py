@@ -38,7 +38,7 @@ class Block:
 
     def __repr__(self):
         """Returns a unambiguous representation of the block"""
-        return '<{}(#{} {})>'.format(self.__class__.__name__, self.number, self.hash)
+        return f'<{self.__class__.__name__}(#{self.number} {self.hash})>'
 
     def __str__(self):
         """Returns a readable representation of the block"""
@@ -46,7 +46,7 @@ class Block:
 
     def __eq__(self, other):
         """Two blocks are equal iff they have the same hash."""
-        return isinstance(other, Block) and self.hash == other.hash
+        return isinstance(other, self.__class__) and self.hash == other.hash
 
     def __ne__(self, other):
         return not self.__eq__(other)
