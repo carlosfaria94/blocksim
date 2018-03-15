@@ -9,7 +9,8 @@ setup(
     packages=find_packages('.'),
     install_requires=[
         'simpy',
-        'pysha3>=1.0.1'
+        'pysha3>=1.0.1',
+        'py_ecc'
     ],
     author='Carlos Faria',
     author_email='carlosfigueira@tecnico.ulisboa.pt',
