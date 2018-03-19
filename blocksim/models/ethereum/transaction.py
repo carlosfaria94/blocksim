@@ -1,10 +1,5 @@
-from blocksim.utils import TT256, keccak_256, encode_hex
+from blocksim.utils import TT256, keccak_256, encode_hex, normalize_key, ecsign, privtoaddr
 from blocksim.exceptions import InvalidTransaction
-
-# in the yellow paper it is specified that s should be smaller than
-# secpk1n (eq.205)
-secpk1n = 115792089237316195423570985008687907852837564279074904382605163141518161494337
-null_address = b'\xff' * 20
 
 class Transaction:
     """ Defines the transaction model.
@@ -42,7 +37,7 @@ class Transaction:
             raise InvalidTransaction("Values way too high!")
 
     @property
-    def network_id(self):
+    def chain_id(self):
         if self.r == 0 and self.s == 0:
             return self.v
         elif self.v in (27, 28):
@@ -57,6 +52,30 @@ class Transaction:
             # Determine sender
             # TODO: https://github.com/ethereum/pyethereum/blob/develop/ethereum/transactions.py#L80
         return self._sender
+
+    def sign(self, key, chain_id):
+        """Sign this transaction with a private key.
+
+        A potentially already existing signature would be overridden.
+
+        EIP155 spec:
+        When computing the hash of a transaction for purposes of signing, instead of hashing
+        only the first six elements (ie. nonce, gasprice, startgas, to, value, data)
+        hash nine elements, with v replaced by `chain_id`, `r = 0` and `s = 0`
+        """
+        assert 1 <= chain_id < 2**63 - 18
+        self.v = chain_id
+        self.r = 0
+        self.s = 0
+        rawhash = keccak_256(str(self).encode('utf-8'))
+
+        key = normalize_key(key)
+
+        self.v, self.r, self.s = ecsign(rawhash, key)
+        self.v += 8 + chain_id * 2
+
+        self._sender = privtoaddr(key)
+        return self
 
     @sender.setter
     def sender(self, value):
