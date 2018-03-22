@@ -2,7 +2,7 @@ import simpy
 
 from blocksim.models.node import Node
 from blocksim.models.network import Network
-from blocksim.models.block import Block
+from blocksim.models.ethereum.block import BlockHeader
 from blocksim.models.ethereum.transaction import Transaction
 
 SIM_DURATION = 50
@@ -14,8 +14,8 @@ def run_simulation(env):
     # Create the network
     network = Network(env)
 
-    block1 = Block('ups')
-    block2 = Block()
+    block1 = BlockHeader()
+    block2 = BlockHeader()
     print(block1)
     print(repr(block1))
     print(block2.hash)
