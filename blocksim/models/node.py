@@ -1,14 +1,19 @@
 from collections import namedtuple
 
 from blocksim.models.network import Connection
+from blocksim.models.chain import Chain
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, size, destination, origin')
 
 class Node:
-    """This class represents the node"""
+    """This class represents the node
+
+    Each node has their own chain
+    """
     def __init__(self, env, network, address, location, transmission_speed):
         self.env = env
         self.network = network
+        self.chain = Chain
         self.transmission_speed = transmission_speed
         self.location = location
         self.address = address
