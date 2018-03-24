@@ -11,6 +11,7 @@ class Messages:
         No other messages may be sent until a Hello is received.
         """
         return {
+            'id': 0,
             'size': 10 # TODO: Measure the size message
         }
 
@@ -20,11 +21,12 @@ class Messages:
         ethereum related messages.
         """
         return {
+            'id': 1,
             'protocol_version': 'PV62',
             'network_id': 'Frontier',
-            'score': self.origin_node.chain.score,
-            'best_hash': self.origin_node.chain.best_hash,
-            'genesis_hash': self.origin_node.chain.genesis_hash,
+            'score': self.origin_node.chain.head.header.difficulty,
+            'best_hash': self.origin_node.chain.head.header.hash,
+            'genesis_hash': self.origin_node.chain.genesis.header.hash,
             'size': 10 # TODO: Measure the size message
         }
 
@@ -35,6 +37,7 @@ class Messages:
         At most `max_headers` items.
         """
         return {
+            'id': 3,
             'block_number': block_number,
             'max_headers': max_headers,
             'skip': skip,
@@ -48,6 +51,7 @@ class Messages:
         for the `get_block_headers` message.
         """
         return {
+            'id': 4,
             'block_headers': [],
             'size': 10 # TODO: Measure the size message
         }
@@ -57,6 +61,7 @@ class Messages:
         Specify the set of blocks that we're interested in with the hashes.
         """
         return {
+            'id': 5,
             'hashes': hashes,
             'size': 10 # TODO: Measure the size message
         }
@@ -66,6 +71,7 @@ class Messages:
         This may contain no items if no blocks were able to be returned for the `get_block_bodies` message.
         """
         return {
+            'id': 6,
             'block_bodies': [],
             'size': 10 # TODO: Measure the size message
         }
