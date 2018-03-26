@@ -2,6 +2,7 @@ from collections import namedtuple
 
 from blocksim.models.network import Connection
 from blocksim.models.chain import Chain
+from blocksim.models.ethereum.block import Block, BlockHeader
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, size, destination, origin')
 
@@ -13,12 +14,14 @@ class Node:
     def __init__(self, env, network, address, location, transmission_speed):
         self.env = env
         self.network = network
-        self.chain = Chain
         self.transmission_speed = transmission_speed
         self.location = location
         self.address = address
         self.inbound_connections = dict()
         self.outbound_connections = dict()
+        # Create genesis block and init the chain
+        genesis = Block(BlockHeader())
+        self.chain = Chain(genesis)
         # The node will join to the network
         network.set_node(self)
 
@@ -43,7 +46,7 @@ class Node:
         # TODO: Add a Store here to queue the messages that need to be sent
         # TODO: When sending add an upload rate
         connection = self.outbound_connections.get(destination_address)
-        print('CONNECTION {}'.format(connection))
+        # print('CONNECTION {}'.format(connection))
         if connection is None:
             print('At {}: Node {} do not have an outbound connection with {}'
                 .format(self.env.now, self.address, destination_address))

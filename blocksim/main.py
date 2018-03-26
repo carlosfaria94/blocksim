@@ -3,39 +3,28 @@ import simpy
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.ethereum.block import BlockHeader
-from blocksim.models.ethereum.transaction import Transaction
+from blocksim.models.ethereum.messages import Messages
 
 SIM_DURATION = 50
 ENV = simpy.Environment()
 
 def run_simulation(env):
     """ Setup and start the simulation """
-    print('Network Simulation')
     # Create the network
     network = Network(env)
-
-    block1 = BlockHeader()
-    block2 = BlockHeader()
-    print(block1)
-    print(repr(block1))
-    print(block2.hash)
-    print(repr(block2))
-    print('blocks are equal?', block1 == block2)
-
-    tx = Transaction(1, 2, 2, 'tt', 2, 'teste')
-    print(tx)
-    print(repr(tx))
 
     node_lisbon = Node(env, network, 'lisbon-address', 'Lisbon', 1)
     node_berlin = Node(env, network, 'berlin-address', 'Berlin', 1)
 
-    print('Nodes in the network:')
-    for node in network.nodes:
-        print(node)
+    print('---- messages ----')
+    print(Messages(node_lisbon).hello())
+    print(Messages(node_berlin).status())
 
-    env.process(node_berlin.send('lisbon-address', 5, 'HELLO LISBON'))
-    env.process(node_berlin.send('lisbon-address', 1, 'HELLO AGAIN LISBON'))
-    env.process(node_lisbon.send('berlin-address', 1, 'HELLO BERLIN'))
+    env.process(node_berlin.send('lisbon-address', 1, Messages(node_berlin).hello()))
+    env.process(node_lisbon.send('berlin-address', 1, Messages(node_lisbon).hello()))
+
+    env.process(node_berlin.send('lisbon-address', 1, Messages(node_berlin).status()))
+
 
     env.run(until=SIM_DURATION)
 

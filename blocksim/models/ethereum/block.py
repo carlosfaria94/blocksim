@@ -73,7 +73,7 @@ class Block:
     :param header: the block header
     :param transactions: a list of transactions
     """
-    def __init__(self, header: BlockHeader, transactions: dict):
+    def __init__(self, header: BlockHeader, transactions=None):
         self.header = header
         self.transactions = transactions
 
