@@ -3,15 +3,13 @@ import simpy
 class Network:
     def __init__(self, env):
         self.env = env
-        self.nodes = dict()
+        self._nodes = {}
 
     def get_node(self, address):
-        if not self.nodes:
-            raise RuntimeError('There are no nodes in the Network.')
-        return self.nodes.get(address)
+        return self._nodes.get(address)
 
-    def set_node(self, node):
-        self.nodes[node.address] = node
+    def add_node(self, node):
+        self._nodes[node.address] = node
 
 class Connection:
     """This class represents the propagation through a Connection."""
