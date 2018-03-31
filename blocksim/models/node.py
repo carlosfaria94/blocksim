@@ -6,6 +6,9 @@ from blocksim.models.ethereum.block import Block, BlockHeader
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, size, destination, origin')
 
+MAX_KNOWN_TXS = 30000 # Maximum transactions hashes to keep in the known list (prevent DOS)
+MAX_KNOWN_BLOCKS = 1024 # Maximum block hashes to keep in the known list (prevent DOS)
+
 class Node:
     """This class represents the node.
 
@@ -31,14 +34,22 @@ class Node:
         # The node will join to the network
         network.add_node(self)
 
-    def add_neighbor(self, node: Node):
-        connection = Connection(self.env, self, node)
-        self.neighbors[node.address] = {
-            'connection': connection,
-            'head': node.chain.head,
-            'knownTxs': set(),
-            'knownBlocks': set()
-        }
+    def add_neighbors(self, *nodes: Node):
+        """Add nodes as neighbors"""
+        for node in nodes:
+            connection = Connection(self.env, self, node)
+            self.neighbors[node.address] = {
+                'connection': connection,
+                'head': node.chain.head,
+                'location': node.location,
+                'address': node.address,
+                'knownTxs': set(),
+                'knownBlocks': set()
+            }
+
+    def update_neighbors(self, new_neighbor):
+        address = new_neighbor['address']
+        self.neighbors[address] = new_neighbor
 
     def send(self, destination_address: str, upload_rate, msg):
         """Sends a message to a specific `destination_address`"""
@@ -55,6 +66,26 @@ class Node:
         yield self.env.timeout(upload_rate)
         envelope = Envelope(msg, self.env.now, 1, connection.destination_node, connection.origin_node)
         connection.put(envelope)
+
+    def mark_block(self, block_hash: str, neighbor):
+        """Marks a block as known for the neighbor, ensuring that it will never be
+        propagated to this particular neighbor."""
+        known_blocks = neighbor['knownBlocks']
+        while len(known_blocks) >= MAX_KNOWN_BLOCKS:
+            known_blocks.pop()
+        known_blocks.add(block_hash)
+        neighbor['knownBlocks'] = known_blocks
+        self.update_neighbors(neighbor)
+
+    def mark_transaction(self, tx_hash: str, neighbor):
+        """Marks a transaction as known for the neighbor, ensuring that it will never be
+        propagated to this particular neighbor."""
+        known_txs = neighbor['knownTxs']
+        while len(known_txs) >= MAX_KNOWN_TXS:
+            known_txs.pop()
+        known_txs.add(tx_hash)
+        neighbor['knownTxs'] = known_txs
+        self.update_neighbors(neighbor)
 
     def listening(self, download_rate):
         # TODO: When sending add an download rate in Mbps
