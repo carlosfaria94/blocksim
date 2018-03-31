@@ -1,6 +1,6 @@
 from blocksim.models.node import Node
 
-class Messages:
+class Message:
     def __init__(self, origin_node: Node):
         self.origin_node = origin_node
 
@@ -37,13 +37,14 @@ class Messages:
         """
         return {
             'id': 2,
-            'transactions': transactions
+            'transactions': transactions,
+            'size': 10 # TODO: Measure the size message
         }
 
     def get_block_headers(self, block_number: int, max_headers: int, reverse: int):
         """ Require peer to return a `block_headers` message.
         Reply must contain a number of block headers, of rising number when `reverse` is `0`,
-        falling when `1`, `skip` blocks apart, beginning at `block_number`.
+        falling when `1`, beginning at `block_number`.
         At most `max_headers` items.
         """
         return {
@@ -54,20 +55,11 @@ class Messages:
             'size': 10 # TODO: Measure the size message
         }
 
-    def block_headers(self, request: dict):
+    def block_headers(self, block_headers: list):
         """ Reply to `get_block_headers` the items in the list are block headers.
         This may contain no block headers if no block headers were able to be returned
         for the `get_block_headers` message.
         """
-        chain = self.origin_node.chain
-        block_headers = []
-        block_hash = chain.get_blockhash_by_number(request.block_number)
-        block_hashes = chain.get_blockhashes_from_hash(block_hash, request.max_headers)
-        for block_hash in block_hashes:
-            block_header = chain.get_block(block_hash).header
-            block_headers.append(block_header)
-        if request.reverse == 0:
-            block_headers.reverse()
         return {
             'id': 4,
             'block_headers': block_headers,
@@ -84,15 +76,10 @@ class Messages:
             'size': 10 # TODO: Measure the size message
         }
 
-    def block_bodies(self, request: dict):
+    def block_bodies(self, block_bodies: list):
         """ Reply to `get_block_bodies`. The items in the list are some of the blocks, minus the header.
         This may contain no items if no blocks were able to be returned for the `get_block_bodies` message.
         """
-        chain = self.origin_node.chain
-        block_bodies = []
-        for block_hash in request.hashes:
-            block = chain.get_block(block_hash)
-            block_bodies.append(block)
         return {
             'id': 6,
             'block_bodies': block_bodies,

@@ -21,7 +21,7 @@ class Transaction:
 
     _sender = None
 
-    def __init__(self, nonce, gasprice, startgas, to, value, data, v=0, r=0, s=0):
+    def __init__(self, nonce, gasprice, startgas, to, value, data=None, v=0, r=0, s=0):
         self.nonce = nonce
         self.gasprice = gasprice
         self.startgas = startgas

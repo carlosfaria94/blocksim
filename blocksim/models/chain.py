@@ -8,7 +8,7 @@ class Chain:
     def __init__(self, genesis=None):
         self.storage = Storage()
         if genesis is None:
-            raise Exception("Need genesis block!")
+            raise RuntimeError("Need genesis block!")
         self.genesis = genesis
         self.storage.put('block:{}'.format(genesis.header.number), genesis.header.hash)
         self.storage.put(genesis.header.hash, genesis)

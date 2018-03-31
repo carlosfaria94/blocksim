@@ -3,7 +3,8 @@ import simpy
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.ethereum.block import BlockHeader
-from blocksim.models.ethereum.messages import Messages
+from blocksim.models.ethereum.node import ETHNode
+from blocksim.models.ethereum.transaction import Transaction
 
 SIM_DURATION = 50
 ENV = simpy.Environment()
@@ -13,18 +14,16 @@ def run_simulation(env):
     # Create the network
     network = Network(env)
 
-    node_lisbon = Node(env, network, 'lisbon-address', 'Lisbon', 1)
-    node_berlin = Node(env, network, 'berlin-address', 'Berlin', 1)
+    node_lisbon = ETHNode(env, network, 1, 'Lisbon', 'lisbon-address')
+    node_berlin = ETHNode(env, network, 1, 'Berlin', 'berlin-address')
+    node_berlin.add_neighbors(node_lisbon)
 
-    print('---- messages ----')
-    print(Messages(node_lisbon).hello())
-    print(Messages(node_berlin).status())
+    first_tx = Transaction(1, 100, 100, 'lisbon-address', 100)
+    second_tx = Transaction(1, 100, 100, 'lisbon-address', 100)
+    third_tx = Transaction(1, 100, 100, 'lisbon-address', 100)
+    transactions = [first_tx, second_tx, third_tx]
 
-    env.process(node_berlin.send('lisbon-address', 1, Messages(node_berlin).hello()))
-    env.process(node_lisbon.send('berlin-address', 1, Messages(node_lisbon).hello()))
-
-    env.process(node_berlin.send('lisbon-address', 1, Messages(node_berlin).status()))
-
+    node_berlin.send_transactions(transactions, 'lisbon-address', 2)
 
     env.run(until=SIM_DURATION)
 
