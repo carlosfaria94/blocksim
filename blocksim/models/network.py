@@ -25,11 +25,12 @@ class Connection:
         self.store.put(envelope)
 
     def put(self, envelope):
-        print('At {}: Message ({}) with {} MB sent by {}, with a destination: {}'
+        print('{} at {}: Message (ID: {}) sent with {} MB sent by {}, with a destination: {}'
             .format(
+                envelope.origin.address,
                 envelope.timestamp,
                 envelope.msg,
-                envelope.size,
+                envelope.msg['size'],
                 envelope.origin.address,
                 envelope.destination.address
             ))

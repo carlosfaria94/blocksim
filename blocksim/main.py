@@ -18,12 +18,12 @@ def run_simulation(env):
     node_berlin = ETHNode(env, network, 1, 'Berlin', 'berlin-address')
     node_berlin.add_neighbors(node_lisbon)
 
-    first_tx = Transaction(1, 100, 100, 'lisbon-address', 100)
-    second_tx = Transaction(1, 100, 100, 'lisbon-address', 100)
-    third_tx = Transaction(1, 100, 100, 'lisbon-address', 100)
+    first_tx = Transaction(1, 140, 100, 'lisbon-address', 100)
+    second_tx = Transaction(1, 110, 100, 'lisbon-address', 100)
+    third_tx = Transaction(1, 150, 100, 'lisbon-address', 100)
     transactions = [first_tx, second_tx, third_tx]
 
-    node_berlin.send_transactions(transactions, 'lisbon-address', 2)
+    node_berlin.send_transactions(transactions, 2)
 
     env.run(until=SIM_DURATION)
 

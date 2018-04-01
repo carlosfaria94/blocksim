@@ -6,12 +6,24 @@ class ETHNode(Node):
     def __init__(self, env, network: Network, transmission_speed, location: str, address: str):
         super().__init__(env, network, transmission_speed, location, address)
 
-    def send_transactions(self, transactions: list, neighbor_address: str, upload_rate):
-        """Send transactions to a neighbor and mark the hashes as known by the neighbor"""
-        for tx in transactions:
-            self._mark_transaction(tx.hash, neighbor_address)
-        transactions_msg = Message(self).transactions(transactions)
-        self.env.process(self.send(neighbor_address, upload_rate, transactions_msg))
+    def send_transactions(self, transactions: list, upload_rate):
+        """Send/Broadcast transactions to all neighbors and mark the hashes as known
+        by each neighbor"""
+        for neighbor_address, neighbor in self.neighbors.items():
+            neighbor_known_txs = neighbor.get('knownTxs')
+            for tx in transactions:
+                # Checks if the transaction was previous sent
+                if any({tx.hash} & neighbor_known_txs):
+                    print('{} at {}: Transaction {} was already sent to {}'.format(
+                        self.address, self.env.now, tx.hash[:8], neighbor_address))
+                    transactions.remove(tx)
+                else:
+                    self._mark_transaction(tx.hash, neighbor_address)
+
+            print('{} at {}: Transactions ready to sent: {}'.format(
+                self.address, self.env.now, transactions))
+            transactions_msg = Message(self).transactions(transactions)
+            self.env.process(self.send(neighbor_address, upload_rate, transactions_msg))
 
     def send_block_headers(self, request: dict, destination_address: str, upload_rate):
         """Send block headers for any node that request it, identified by the `destination_address`

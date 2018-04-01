@@ -4,7 +4,7 @@ from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
 from blocksim.models.ethereum.block import Block, BlockHeader
 
-Envelope = namedtuple('Envelope', 'msg, timestamp, size, destination, origin')
+Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
 
 MAX_KNOWN_TXS = 30000 # Maximum transactions hashes to keep in the known list (prevent DOS)
 MAX_KNOWN_BLOCKS = 1024 # Maximum block hashes to keep in the known list (prevent DOS)
@@ -43,8 +43,8 @@ class Node:
                 'head': node.chain.head,
                 'location': node.location,
                 'address': node.address,
-                'knownTxs': set(),
-                'knownBlocks': set()
+                'knownTxs': {''},
+                'knownBlocks': {''}
             }
 
     def _update_neighbors(self, new_neighbor: dict):
@@ -113,5 +113,5 @@ class Node:
         yield self.env.timeout(3)
         # TODO: When sending add an upload rate
         yield self.env.timeout(upload_rate)
-        envelope = Envelope(msg, self.env.now, 1, connection.destination_node, connection.origin_node)
+        envelope = Envelope(msg, self.env.now, connection.destination_node, connection.origin_node)
         connection.put(envelope)
