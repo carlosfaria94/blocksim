@@ -8,14 +8,13 @@ class ETHNode(Node):
 
     def send_transactions(self, transactions: list, neighbor_address: str, upload_rate):
         """Send transactions to a neighbor and mark the hashes as known by the neighbor"""
-        print(super()._get_neighbor(neighbor_address))
         for tx in transactions:
-            super()._mark_transaction(tx.hash, neighbor_address)
+            self._mark_transaction(tx.hash, neighbor_address)
         transactions_msg = Message(self).transactions(transactions)
-        self.env.process(super().send(neighbor_address, upload_rate, transactions_msg))
+        self.env.process(self.send(neighbor_address, upload_rate, transactions_msg))
 
-    def send_block_headers(self, request: dict, request_address: str, upload_rate):
-        """Send block headers for any node that request it, identified by the `request_address`
+    def send_block_headers(self, request: dict, destination_address: str, upload_rate):
+        """Send block headers for any node that request it, identified by the `destination_address`
         ```
         request = { 
             block_number,
@@ -39,15 +38,12 @@ class ETHNode(Node):
             block_headers.reverse()
 
         block_headers_msg = Message(self).block_headers(block_headers)
-        self.send(request_address, upload_rate, block_headers_msg)
+        self.env.process(super().send(destination_address, upload_rate, block_headers_msg))
 
-    def send_block_bodies(self, request: dict, request_address: str, upload_rate):
-        """Send block bodies for any node that request it, identified by the `request_address`
-        ```
-        request = { 
-            hashes
-        }
-        ```
+    def send_block_bodies(self, request: dict, destination_address: str, upload_rate):
+        """Send block bodies for any node that request it, identified by the `destination_address`.
+
+        In `request['hashes']` we obtain a list of hashes of block bodies being requested
         """
         hashes = request.get('hashes')
 
@@ -57,4 +53,27 @@ class ETHNode(Node):
             block_bodies.append(block)
 
         block_bodies_msg = Message(self).block_bodies(block_bodies)
-        self.send(request_address, upload_rate, block_bodies_msg)
+        self.env.process(self.send(destination_address, upload_rate, block_bodies_msg))
+
+    def request_headers(self,
+                        block_number: int,
+                        max_headers: int,
+                        reverse: int,
+                        destination_address: str,
+                        upload_rate):
+        """Request a node (identified by the `destination_address`) to return block headers.
+
+        Request must contain a number of block headers, of rising number when `reverse` is `0`,
+        falling when `1`, beginning at `block_number`.
+        At most `max_headers` items.
+        """
+        get_block_headers_msg = Message(self).get_block_headers(block_number, max_headers, reverse)
+        self.env.process(self.send(destination_address, upload_rate, get_block_headers_msg))
+
+    def request_bodies(self, hashes: list, destination_address: str, upload_rate):
+        """Request a node (identified by the `destination_address`) to return block bodies.
+        Specify a list of `hashes` that we're interested in.
+        """
+        get_block_bodies_msg = Message(self).get_block_bodies(hashes)
+        self.env.process(self.send(destination_address, upload_rate, get_block_bodies_msg))
+

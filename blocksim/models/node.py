@@ -102,7 +102,6 @@ class Node:
 
     def send(self, destination_address: str, upload_rate, msg):
         """Sends a message to a specific `destination_address`"""
-        print('upload rate', upload_rate)
         # TODO: Add a Store here to queue the messages that need to be sent
         neighbor = self._get_neighbor(destination_address)
         connection = neighbor.get('connection')

@@ -1,6 +1,10 @@
 from blocksim.models.node import Node
 
 class Message:
+    """Defines a model for the network messages of the Ethereum blockchain.
+
+    For each message its calculated the size, taking into account measurements from the live and public network.
+    """
     def __init__(self, origin_node: Node):
         self.origin_node = origin_node
 
@@ -42,11 +46,6 @@ class Message:
         }
 
     def get_block_headers(self, block_number: int, max_headers: int, reverse: int):
-        """ Require peer to return a `block_headers` message.
-        Reply must contain a number of block headers, of rising number when `reverse` is `0`,
-        falling when `1`, beginning at `block_number`.
-        At most `max_headers` items.
-        """
         return {
             'id': 3,
             'block_number': block_number,
@@ -67,9 +66,6 @@ class Message:
         }
 
     def get_block_bodies(self, hashes: list):
-        """ Require peer to return a `block_bodies` message.
-        Specify the set of blocks that we're interested in with the hashes.
-        """
         return {
             'id': 5,
             'hashes': hashes,
