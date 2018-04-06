@@ -33,19 +33,24 @@ class Node:
         self.chain = Chain(genesis)
         # The node will join to the network
         network.add_node(self)
+        self.network = network
 
     def add_neighbors(self, *nodes):
         """Add nodes as neighbors"""
         for node in nodes:
             connection = Connection(self.env, self, node)
             self.neighbors[node.address] = {
+                'network': node.network.name,
                 'connection': connection,
-                'head': node.chain.head,
+                'genesisHash': node.chain.genesis.header.hash,
+                'bestHash': node.chain.head.header.hash,
                 'location': node.location,
                 'address': node.address,
                 'knownTxs': {''},
                 'knownBlocks': {''}
             }
+        # Start listening for messages from the neighbors
+        self.env.process(self.listening_neighbors(2))
 
     def _update_neighbors(self, new_neighbor: dict):
         address = new_neighbor.get('address')
@@ -54,8 +59,10 @@ class Node:
     def _get_neighbor(self, neighbor_address: str):
         neighbor = self.neighbors.get(neighbor_address)
         if neighbor is None:
-            raise RuntimeError('Neighbor {} not reachable by the {}'.format(neighbor_address, self.address))
-        return neighbor
+            print('Neighbor {} not reachable by the {}'.format(neighbor_address, self.address))
+            return None
+        else:
+            return neighbor
 
     def _mark_block(self, block_hash: str, neighbor_address: str):
         """Marks a block as known for the neighbor, ensuring that it will never be
@@ -79,35 +86,60 @@ class Node:
         neighbor['knownTxs'] = known_txs
         self._update_neighbors(neighbor)
 
-    def listening(self, download_rate):
+    def listening_neighbors(self, download_rate):
         # TODO: When sending add an download rate in Mbps
-        for neighbor in self.neighbors.items():
-            connection: Connection = neighbor['connection']
+        for neighbor_address, neighbor in self.neighbors.items():
+            connection = neighbor.get('connection')
             if connection is None:
-                raise RuntimeError('There is not a direct connection with the neighbor ({})'
-                .format(neighbor))
-            print('At {}: Node {} is listening for inbound connections from the {}'
-            .format(self.env.now, self.address, connection.destination_node.address))
+                raise RuntimeError('{} at {}: There is not a direct connection with the neighbor {}'
+                .format(self.address, self.env.now, neighbor_address))
+            print('{} at {}: Node {} is listening for inbound connections from the {}'
+            .format(self.address, self.env.now, self.address, connection.destination_node.address))
             while True:
-                # Get the message from connection
+                # Get the messages from  connection
                 envelope = yield connection.get()
-                print('At {}: Node with address {} receive the message: {} at {} from {}'.format(
-                    self.env.now,
+                print('{} at {}: Receive a message (ID: {}) created at {} from {}'.format(
                     self.address,
-                    envelope.msg,
+                    self.env.now,
+                    envelope.msg['id'],
                     envelope.timestamp,
                     envelope.origin.address
                 ))
                 yield self.env.timeout(download_rate)
 
+    def listening_node(self, connection, download_rate):
+        print('{} at {}: Node {} is listening for inbound connections from the {}'
+            .format(self.address, self.env.now, self.address, connection.destination_node.address))
+        while True:
+            # Get the messages from  connection
+            envelope = yield connection.get()
+            print('{} at {}: Receive a message (ID: {}) created at {} from {}'.format(
+                self.address,
+                self.env.now,
+                envelope.msg['id'],
+                envelope.timestamp,
+                envelope.origin.address
+            ))
+            yield self.env.timeout(download_rate)
+
     def send(self, destination_address: str, upload_rate, msg):
-        """Sends a message to a specific `destination_address`"""
+        """Sends a message to a specific `destination_address` that can be a neighbor
+        or a random node on the network"""
         # TODO: Add a Store here to queue the messages that need to be sent
+
+        # Check if `destination_address` is part of neighbors
         neighbor = self._get_neighbor(destination_address)
-        connection = neighbor.get('connection')
+        connection = None
+        if neighbor is None:
+            # If `destination_address` is not part of neighbors, create a new connection
+            destination_node = self.network.get_node(destination_address)
+            connection = Connection(self.env, self, destination_node)
+        else:
+            connection = neighbor.get('connection')
+
         if connection is None:
-            raise RuntimeError('There is not a direct connection with the neighbor ({})'
-            .format(neighbor))
+            raise RuntimeError('Not possible to create a direct connection with {}'
+                .format(destination_address))
 
         # TODO: Calculate a delay/timeout do simulate the TCP handshake
         yield self.env.timeout(3)

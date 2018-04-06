@@ -12,7 +12,7 @@ ENV = simpy.Environment()
 def run_simulation(env):
     """ Setup and start the simulation """
     # Create the network
-    network = Network(env)
+    network = Network(env, 'NetworkXPTO')
 
     node_lisbon = ETHNode(env, network, 1, 'Lisbon', 'lisbon-address')
     node_berlin = ETHNode(env, network, 1, 'Berlin', 'berlin-address')

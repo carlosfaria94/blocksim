@@ -5,24 +5,22 @@ from blocksim.exceptions import VerificationFailed, InvalidTransaction
 
 class Chain:
     """ Defines the chain model."""
-    def __init__(self, genesis=None):
+    def __init__(self, genesis):
         self.storage = Storage()
-        if genesis is None:
-            raise RuntimeError("Need genesis block!")
         self.genesis = genesis
         self.storage.put('block:{}'.format(genesis.header.number), genesis.header.hash)
         self.storage.put(genesis.header.hash, genesis)
-        self.head_hash = genesis.header.hash
+        self._head_hash = genesis.header.hash
         self.parent_queue = {}
 
     @property
     def head(self):
         """Block in the head (tip) of the chain"""
-        block = self.storage.get(self.head_hash)
+        block = self.storage.get(self._head_hash)
         return block
 
     def get_parent(self, block):
-        # Genesis Block do not have parent
+        """Genesis Block do not have parent"""
         if block.header.number == 0:
             return None
         return self.get_block(block.header.prevhash)
@@ -75,7 +73,7 @@ class Chain:
     def add_block(self, block):
         """Call upon receiving a block"""
         # Is the block being added to the heap?
-        if block.header.prevhash == self.head_hash:
+        if block.header.prevhash == self._head_hash:
             print('Adding block the head', head=block.header.prevhash[:4])
             try:
                 # TODO: Send state
@@ -85,10 +83,10 @@ class Chain:
                 print('Block %d (%s) with parent %s invalid, reason: %s' % (block.header.number, block.header.hash[:4], block.header.prevhash[:4], str(e)))
                 return False
             self.storage.put('block:{}'.format(block.header.number), block.header.hash)
-            self.head_hash = block.header.hash
+            self._head_hash = block.header.hash
         # Or is the block being added to a chain that is not currently the head?
         elif block.header.prevhash in self.storage:
-            print('Receiving block %d (%s) not on head (%s), adding to secondary post state %s' % (block.header.number, block.header.hash[:4], self.head_hash[:4], block.header.prevhash[:4]))
+            print('Receiving block %d (%s) not on head (%s), adding to secondary post state %s' % (block.header.number, block.header.hash[:4], self._head_hash[:4], block.header.prevhash[:4]))
             try:
                 temp_state = {}
                 apply_block(temp_state, block)

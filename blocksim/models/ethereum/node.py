@@ -6,6 +6,16 @@ class ETHNode(Node):
     def __init__(self, env, network: Network, transmission_speed, location: str, address: str):
         super().__init__(env, network, transmission_speed, location, address)
 
+    def handshake(self, network: str, total_difficulty: int, best_hash: str, genesis_hash: str):
+        """Handshake executes the ETH protocol handshake, negotiating network, difficulties,
+        head and genesis blocks"""
+        # Get the difficulty from the head of the chain, known as Total Difficulty (TD)
+        my_total_difficulty = self.chain.head.header.difficulty
+        if my_total_difficulty < total_difficulty:
+            print('I am not sync, I need to sync with this node')
+        else:
+            print('I am sync with this peer')
+
     def send_transactions(self, transactions: list, upload_rate):
         """Send/Broadcast transactions to all neighbors and mark the hashes as known
         by each neighbor"""
@@ -50,7 +60,7 @@ class ETHNode(Node):
             block_headers.reverse()
 
         block_headers_msg = Message(self).block_headers(block_headers)
-        self.env.process(super().send(destination_address, upload_rate, block_headers_msg))
+        self.env.process(self.send(destination_address, upload_rate, block_headers_msg))
 
     def send_block_bodies(self, request: dict, destination_address: str, upload_rate):
         """Send block bodies for any node that request it, identified by the `destination_address`.

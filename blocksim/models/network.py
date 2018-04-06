@@ -1,8 +1,9 @@
 import simpy
 
 class Network:
-    def __init__(self, env):
+    def __init__(self, env, name):
         self.env = env
+        self.name = name
         self._nodes = {}
 
     def get_node(self, address):

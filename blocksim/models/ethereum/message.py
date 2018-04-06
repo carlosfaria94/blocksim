@@ -26,9 +26,9 @@ class Message:
         """
         return {
             'id': 1,
-            'protocol_version': 'PV62',
-            'network_id': 'Frontier',
-            'score': self.origin_node.chain.head.header.difficulty,
+            'protocol_version': self.origin_node.protocolVersion,
+            'network': self.origin_node.network.name,
+            'td': self.origin_node.chain.head.header.difficulty,
             'best_hash': self.origin_node.chain.head.header.hash,
             'genesis_hash': self.origin_node.chain.genesis.header.hash,
             'size': 10 # TODO: Measure the size message
