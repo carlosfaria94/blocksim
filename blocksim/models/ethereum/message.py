@@ -10,15 +10,6 @@ class Message:
 
     # TODO: We need to calculate the real size for each message (we need to measure from a real network)
 
-    def hello(self):
-        """ First packet sent over the connection, and sent once by both sides.
-        No other messages may be sent until a Hello is received.
-        """
-        return {
-            'id': 0,
-            'size': 10 # TODO: Measure the size message
-        }
-
     def status(self):
         """ Inform a peer of its current Ethereum state.
         This message should be sent `after` the initial handshake and `prior` to any

@@ -1,10 +1,10 @@
 from blocksim.models.node import Node
-from blocksim.models.network import Network
+from blocksim.models.network import Network, Connection
 from blocksim.models.ethereum.message import Message
 
 class ETHNode(Node):
-    def __init__(self, env, network: Network, transmission_speed, location: str, address: str):
-        super().__init__(env, network, transmission_speed, location, address)
+    def __init__(self, env, network: Network, transmission_speed, download_rate, location: str, address: str):
+        super().__init__(env, network, transmission_speed, download_rate, location, address)
 
     def handshake(self, network: str, total_difficulty: int, best_hash: str, genesis_hash: str):
         """Handshake executes the ETH protocol handshake, negotiating network, difficulties,
@@ -14,7 +14,7 @@ class ETHNode(Node):
         if my_total_difficulty < total_difficulty:
             print('I am not sync, I need to sync with this node')
         else:
-            print('I am sync with this peer')
+            print('I am sync with this node')
 
     def send_transactions(self, transactions: list, upload_rate):
         """Send/Broadcast transactions to all neighbors and mark the hashes as known
@@ -33,7 +33,11 @@ class ETHNode(Node):
             print('{} at {}: Transactions ready to sent: {}'.format(
                 self.address, self.env.now, transactions))
             transactions_msg = Message(self).transactions(transactions)
-            self.env.process(self.send(neighbor_address, upload_rate, transactions_msg))
+            self.env.process(self.broadcast_to_neighbors(upload_rate, transactions_msg))
+
+    def send_status(self, destination_address: str, upload_rate):
+        status_msg = Message(self).status()
+        self.env.process(self.send(destination_address, upload_rate, status_msg))
 
     def send_block_headers(self, request: dict, destination_address: str, upload_rate):
         """Send block headers for any node that request it, identified by the `destination_address`

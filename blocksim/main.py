@@ -14,8 +14,8 @@ def run_simulation(env):
     # Create the network
     network = Network(env, 'NetworkXPTO')
 
-    node_lisbon = ETHNode(env, network, 1, 'Lisbon', 'lisbon-address')
-    node_berlin = ETHNode(env, network, 1, 'Berlin', 'berlin-address')
+    node_lisbon = ETHNode(env, network, 1, 2, 'Lisbon', 'lisbon-address')
+    node_berlin = ETHNode(env, network, 1, 2, 'Berlin', 'berlin-address')
     node_berlin.add_neighbors(node_lisbon)
 
     first_tx = Transaction(1, 140, 100, 'lisbon-address', 100)
