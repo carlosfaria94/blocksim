@@ -3,3 +3,6 @@ class InvalidTransaction(Exception):
 
 class VerificationFailed(Exception):
     pass
+
+class UnsignedTransaction(InvalidTransaction):
+    pass

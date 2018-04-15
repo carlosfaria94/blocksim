@@ -12,12 +12,11 @@ class Message:
 
     def status(self):
         """ Inform a peer of its current Ethereum state.
-        This message should be sent `after` the initial handshake and `prior` to any
-        ethereum related messages.
+        This message should be sent `after` the initial handshake and `prior` to any ethereum related messages.
         """
         return {
             'id': 1,
-            'protocol_version': self.origin_node.protocolVersion,
+            'protocol_version': 'PV62',
             'network': self.origin_node.network.name,
             'td': self.origin_node.chain.head.header.difficulty,
             'best_hash': self.origin_node.chain.head.header.hash,

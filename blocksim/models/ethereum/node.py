@@ -1,10 +1,26 @@
 from blocksim.models.node import Node
 from blocksim.models.network import Network, Connection
 from blocksim.models.ethereum.message import Message
+from blocksim.models.consensus import validate_transaction
 
 class ETHNode(Node):
-    def __init__(self, env, network: Network, transmission_speed, download_rate, location: str, address: str):
-        super().__init__(env, network, transmission_speed, download_rate, location, address)
+    def __init__(self,
+                env,
+                network: Network,
+                transmission_speed,
+                download_rate,
+                upload_rate,
+                location: str,
+                address: str,
+                is_mining=False):
+        super().__init__(env,
+                        network,
+                        transmission_speed,
+                        download_rate,
+                        upload_rate,
+                        location,
+                        address,
+                        is_mining)
 
     def handshake(self, network: str, total_difficulty: int, best_hash: str, genesis_hash: str):
         """Handshake executes the ETH protocol handshake, negotiating network, difficulties,
@@ -16,28 +32,62 @@ class ETHNode(Node):
         else:
             print('I am sync with this node')
 
-    def send_transactions(self, transactions: list, upload_rate):
-        """Send/Broadcast transactions to all neighbors and mark the hashes as known
-        by each neighbor"""
-        for neighbor_address, neighbor in self.neighbors.items():
-            neighbor_known_txs = neighbor.get('knownTxs')
+    def get_node_status(self, node):
+        status = Message(node).status()
+        # TODO: Apply a deplay according to network communication between nodes
+        yield self.env.timeout(3)
+        return status
+
+    def broadcast_transactions(self, transactions: list, upload_rate):
+        """Broadcast transactions to all nodes with an active session and mark the hashes
+        as known by each node"""
+        yield self.connecting # Wait for all connections
+        for node_address, node in self.active_sessions.items():
             for tx in transactions:
                 # Checks if the transaction was previous sent
-                if any({tx.hash} & neighbor_known_txs):
+                if any({tx.hash} & node.get('knownTxs')):
                     print('{} at {}: Transaction {} was already sent to {}'.format(
-                        self.address, self.env.now, tx.hash[:8], neighbor_address))
+                        self.address, self.env.now, tx.hash[:8], node_address))
                     transactions.remove(tx)
                 else:
-                    self._mark_transaction(tx.hash, neighbor_address)
+                    self._mark_transaction(tx.hash, node_address)
 
-            print('{} at {}: Transactions ready to sent: {}'.format(
-                self.address, self.env.now, transactions))
-            transactions_msg = Message(self).transactions(transactions)
-            self.env.process(self.broadcast_to_neighbors(upload_rate, transactions_msg))
+            # Only send if it has transactions
+            if transactions:
+                print('{} at {}: {} transactions ready to be sent'.format(
+                    self.address, self.env.now, len(transactions)))
+                transactions_msg = Message(self).transactions(transactions)
+
+                #TODO: We need first know the status of the other node and then broadcast
+                connection = node.get('connection')
+                self.env.process(self.get_node_status(connection.destination_node))
+
+                self.env.process(self.broadcast(upload_rate, transactions_msg))
 
     def send_status(self, destination_address: str, upload_rate):
         status_msg = Message(self).status()
         self.env.process(self.send(destination_address, upload_rate, status_msg))
+
+    def _read_envelope(self, envelope, connection):
+        super()._read_envelope(envelope, connection)
+        if envelope.msg['id'] == 1:
+            self._receive_status(envelope, connection)
+        if envelope.msg['id'] == 2:
+            self._receive_transactions(envelope, connection)
+
+    def _receive_status(self, envelope, connection):
+        pass
+
+    def _receive_transactions(self, envelope, connection):
+        """Handle transactions received"""
+        # If node is miner store transactions in a pool (ordered by the gas price)
+        transactions = envelope.msg.get('transactions')
+        if self.is_mining:
+            for tx in transactions:
+                self.transaction_queue.put(tx)
+        else:
+            #TODO: validate_transaction('', tx)
+            self.env.process(self.broadcast_transactions(transactions, None))
 
     def send_block_headers(self, request: dict, destination_address: str, upload_rate):
         """Send block headers for any node that request it, identified by the `destination_address`

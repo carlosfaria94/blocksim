@@ -3,6 +3,7 @@ from collections import namedtuple
 from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
 from blocksim.models.ethereum.block import Block, BlockHeader
+from blocksim.models.transaction_queue import TransactionQueue
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
 
@@ -14,8 +15,8 @@ class Node:
 
     Each node has their own `chain`, and when a node is initiated its started with a clean chain.
 
-    A node needs to be initiated with known `neighbors` to run the simulation. For now there is
-    not any mechanism to discover neighbors.
+    A node needs to be initiated with known nodes to run the simulation. For now there is
+    not any mechanism to discover nodes.
 
     To properly stimulate a real world scenario, the node model needs to know the geographic
     `location` and his `transmission_speed`.
@@ -27,88 +28,72 @@ class Node:
                 network: Network,
                 transmission_speed,
                 download_rate,
+                upload_rate,
                 location: str,
-                address: str):
+                address: str,
+                is_mining=False):
         self.env = env
+        self.network = network
         self.transmission_speed = transmission_speed
         self.download_rate = download_rate
+        self.upload_rate = upload_rate
         self.location = location
         self.address = address
-        self.neighbors = {}
+        self.is_mining = is_mining
         self.active_sessions = {}
+        # Transaction Queue to store the transactions
+        # TODO: The transaction queue delay is hard coded
+        self.transaction_queue = TransactionQueue(env, 2, self)
         # Create genesis block and init the chain
         genesis = Block(BlockHeader())
         self.chain = Chain(genesis)
-        # The node will join to the network
-        network.add_node(self)
-        self.network = network
+        # Join the node to the network
+        self.network.add_node(self)
+        self.connecting = None
 
-    def send_ack(self, destination_address: str, upload_rate):
-        """First packet sent over the connection, and sent once by both sides.
-        No other messages may be sent until a ACK is received.
-        When a ACK message is sent a new connection is created with the `destination_address`
-        """
-        ack_msg = {
-            'id': 0,
-            'size': 10 # TODO: Measure the size message
-        }
-        self.env.process(self.send(destination_address, upload_rate, ack_msg))
-
-    def receive_ack(self, origin_address: str, connection: Connection):
-        self.active_sessions[origin_address] = connection
-
-    def add_neighbors(self, *nodes):
-        """Add nodes as neighbors"""
+    def connect(self, upload_rate, *nodes):
+        """Simulate an acknowledgement phase with given nodes"""
         for node in nodes:
             connection = Connection(self.env, self, node)
-            self.neighbors[node.address] = {
-                'network': node.network.name,
+            self.active_sessions[node.address] = {
                 'connection': connection,
-                'genesisHash': node.chain.genesis.header.hash,
-                'bestHash': node.chain.head.header.hash,
-                'location': node.location,
-                'address': node.address,
                 'knownTxs': {''},
                 'knownBlocks': {''}
             }
-        # Start listening for messages from the neighbors
-        self.env.process(self.listening_neighbors())
+            self.connecting = self.env.process(self._connecting(upload_rate, node, connection))
 
-    def _update_neighbors(self, new_neighbor: dict):
-        address = new_neighbor.get('address')
-        self.neighbors[address] = new_neighbor
+    def _connecting(self, upload_rate, node, connection):
+        """Simulates the time needed to perform TCP handshake and acknowledgement phase"""
+        # TODO: Calculate a delay/timeout do simulate the TCP handshake + HELLO ACK protocol
+        # TODO: Message size?
+        yield self.env.timeout(upload_rate)
+        print('{} at {}: Connection established with {}'.format(self.address, self.env.now, node.address))
+        # Start listening for messages from the destination node
+        self.env.process(connection.destination_node.listening_node(connection))
 
-    def _get_neighbor(self, neighbor_address: str):
-        neighbor = self.neighbors.get(neighbor_address)
-        if neighbor is None:
-            print('Neighbor {} not reachable by the {}'.format(neighbor_address, self.address))
-            return None
-        else:
-            return neighbor
-
-    def _mark_block(self, block_hash: str, neighbor_address: str):
-        """Marks a block as known for the neighbor, ensuring that it will never be
-        propagated to this particular neighbor."""
-        neighbor = self._get_neighbor(neighbor_address)
-        known_blocks = neighbor.get('knownBlocks')
+    def _mark_block(self, block_hash: str, node_address: str):
+        """Marks a block as known for a specific node, ensuring that it will never be
+        propagated again."""
+        node = self.active_sessions.get(node_address)
+        known_blocks = node.get('knownBlocks')
         while len(known_blocks) >= MAX_KNOWN_BLOCKS:
             known_blocks.pop()
         known_blocks.add(block_hash)
-        neighbor['knownBlocks'] = known_blocks
-        self._update_neighbors(neighbor)
+        node['knownBlocks'] = known_blocks
+        self.active_sessions[node_address] = node
 
-    def _mark_transaction(self, tx_hash: str, neighbor_address: str):
-        """Marks a transaction as known for the neighbor, ensuring that it will never be
-        propagated to this particular neighbor."""
-        neighbor = self._get_neighbor(neighbor_address)
-        known_txs = neighbor.get('knownTxs')
+    def _mark_transaction(self, tx_hash: str, node_address: str):
+        """Marks a transaction as known for a specific node, ensuring that it will never be
+        propagated again."""
+        node = self.active_sessions.get(node_address)
+        known_txs = node.get('knownTxs')
         while len(known_txs) >= MAX_KNOWN_TXS:
             known_txs.pop()
         known_txs.add(tx_hash)
-        neighbor['knownTxs'] = known_txs
-        self._update_neighbors(neighbor)
+        node['knownTxs'] = known_txs
+        self.active_sessions[node_address] = node
 
-    def read_envelope(self, envelope):
+    def _read_envelope(self, envelope, connection):
         print('{} at {}: Receive a message (ID: {}) created at {} from {}'.format(
                 self.address,
                 self.env.now,
@@ -117,32 +102,18 @@ class Node:
                 envelope.origin.address
             ))
 
-    def listening_neighbors(self):
-        # TODO: When receiving add an download rate in Mbps
-        for neighbor_address, neighbor in self.neighbors.items():
-            connection = neighbor.get('connection')
-            if connection is None:
-                raise RuntimeError('{} at {}: There is not a direct connection with the neighbor {}'
-                .format(self.address, self.env.now, neighbor_address))
-            print('{} at {}: Node {} is listening for connections from the {}'
-            .format(self.address, self.env.now, self.address, connection.destination_node.address))
-            while True:
-                # Get the messages from  connection
-                envelope = yield connection.get()
-                self.read_envelope(envelope)
-                yield self.env.timeout(self.download_rate)
-
     def listening_node(self, connection):
-        print('{} at {}: Node {} is listening for connections from the {}'
-            .format(self.address, self.env.now, self.address, connection.destination_node.address))
+        print('{} at {}: Listening for connections from the {}'
+            .format(self.address, self.env.now, connection.origin_node.address))
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
-            self.read_envelope(envelope)
+            self._read_envelope(envelope, connection)
             yield self.env.timeout(self.download_rate)
 
     def send(self, destination_address: str, upload_rate, msg):
         active_connection = self.active_sessions.get(destination_address)
+        print(active_connection)
         if active_connection is None and msg['id'] == 0:
             # We do not have an active connection with the destination because its a ACK msg
             destination_node = self.network.get_node(destination_address)
@@ -157,24 +128,29 @@ class Node:
         # The connection exist
         # The destination node need to start listening on this connection
         self.env.process(destination_node.listening_node(active_connection))
+
+        if upload_rate is None:
+            upload_rate = self.upload_rate
         yield self.env.timeout(upload_rate)
         envelope = Envelope(msg, self.env.now, active_connection.destination_node, active_connection.origin_node)
         active_connection.put(envelope)
 
-    def broadcast_to_neighbors(self, upload_rate, msg):
-        """Broadcast a message to all neighbors"""
+    def broadcast(self, upload_rate, msg):
+        """Broadcast a message to all nodes with an active session"""
         # TODO: Add a Store here to queue the messages that need to be sent
 
-        for neighbor_address, neighbor in self.neighbors.items():
-            connection = neighbor.get('connection')
+        for node_address, node in self.active_sessions.items():
+            connection = node.get('connection')
 
             if connection is None:
-                raise RuntimeError('Not possible to create a direct connection with the neighbor {}'
-                    .format(neighbor_address))
+                raise RuntimeError('Not possible to create a direct connection with the node {}'
+                    .format(node_address))
 
             # TODO: Calculate a delay/timeout do simulate the TCP handshake ??
             yield self.env.timeout(3)
             # TODO: When sending add an upload rate
+            if upload_rate is None:
+                upload_rate = self.upload_rate
             yield self.env.timeout(upload_rate)
             envelope = Envelope(msg, self.env.now, connection.destination_node, connection.origin_node)
             connection.put(envelope)

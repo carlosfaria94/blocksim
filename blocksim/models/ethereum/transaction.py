@@ -98,8 +98,17 @@ class Transaction:
         """Two transactions are equal iff they have the same hash."""
         return isinstance(other, self.__class__) and self.hash == other.hash
 
-    def __lt__(self, other):
-        return isinstance(other, self.__class__) and self.hash < other.hash
-
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __lt__(self, other):
+        return isinstance(other, self.__class__) and self.gasprice < other.gasprice
+
+    def __le__(self, other):
+        return isinstance(other, self.__class__) and self.gasprice <= other.gasprice
+
+    def __gt__(self, other):
+        return isinstance(other, self.__class__) and self.gasprice > other.gasprice
+
+    def __ge__(self, other):
+        return isinstance(other, self.__class__) and self.gasprice >= other.gasprice

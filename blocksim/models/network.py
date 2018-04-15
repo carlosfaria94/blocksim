@@ -30,7 +30,7 @@ class Connection:
             .format(
                 envelope.origin.address,
                 envelope.timestamp,
-                envelope.msg,
+                envelope.msg['id'],
                 envelope.msg['size'],
                 envelope.origin.address,
                 envelope.destination.address

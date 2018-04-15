@@ -8,6 +8,8 @@ itself, allowing the actual state transition logic to be a very clean `apply_tra
 and `apply_block(state, block)`.
 """
 
+null_address = b'\xff' * 20
+
 def apply_block(state, block):
     """Applies the block-level state transition function"""
     print('apply block', state, block)
@@ -16,3 +18,7 @@ def apply_block(state, block):
 def apply_transaction(state, tx):
     """Applies the state transition function"""
     print('apply STF', state, tx)
+
+
+def validate_transaction(state, tx):
+    print('validate tx')
