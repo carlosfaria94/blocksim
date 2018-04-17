@@ -1,7 +1,9 @@
 from blocksim.models.node import Node
 from blocksim.models.network import Network, Connection
+from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.ethereum.message import Message
 from blocksim.models.consensus import validate_transaction
+from blocksim.models.ethereum.config import default_config
 
 class ETHNode(Node):
     def __init__(self,
@@ -21,6 +23,85 @@ class ETHNode(Node):
                         location,
                         address,
                         is_mining)
+
+    def init_mining(self,
+                    duration_to_validate_tx,
+                    duration_to_solve_puzzle,
+                    gas_limit_per_block=default_config['GENESIS_GAS_LIMIT']):
+        """Simulates the mining operation.
+        (1) Gets transactions from the queue
+        (2) Validates each transaction
+        (3) Constructs a candidate block with intrinsic valid transactions
+        (4) Solves a cryptographic puzzle
+        (5) Broadcast the candidate block with the Proof of Work
+        """
+        print('{} at {}: Start mining process, waiting for transactions.'.format(
+            self.address, self.env.now))
+        while True:
+            txs_intrinsic_gas = 0
+            pending_txs = []
+            while txs_intrinsic_gas < gas_limit_per_block:
+                pending_tx = yield self.transaction_queue.get()
+                pending_txs.append(pending_tx)
+                txs_intrinsic_gas += pending_tx.startgas
+            for pending_tx in pending_txs:
+                # Simulate the transaction validation
+                yield self.env.timeout(duration_to_validate_tx)
+
+            # Build the candidate block
+            candidate_block = self._build_candidate_block(
+                gas_limit_per_block,
+                txs_intrinsic_gas,
+                pending_txs)
+            print('{} at {}: New candidate block created {}'.format(
+                self.address, self.env.now, candidate_block.header))
+
+            # Mine the block by simulating the resolution of a puzzle
+            candidate_block = self._mine(candidate_block)
+            yield self.env.timeout(duration_to_solve_puzzle)
+
+            print('{} at {}: Solved the cryptographic puzzle for the candidate block {}'.format(
+                self.address, self.env.now, candidate_block.header))
+
+            # We need to broadcast the new candidate block across the network
+            self.send_new_blocks([candidate_block], None)
+
+    def _mine(self, candidate_block):
+        """Simulates the mining operation. Only change the nonce to 'MINED'
+        In a simulation it is not needed to determine the nonce"""
+        candidate_block.header.nonce = 'MINED'
+        return candidate_block
+
+    def _build_candidate_block(self, gas_limit_per_block, txs_intrinsic_gas, pending_txs):
+        # Get the current head block
+        prev_block = self.chain.head
+
+        # TODO
+        tx_list_root = uncles_hash = state_root = receipts_root = default_config['BLANK_ROOT']
+        # TODO: Miner coinbase address
+        coinbase = default_config['GENESIS_COINBASE']
+        # TODO: Mining difficulty
+        difficulty = default_config['GENESIS_DIFFICULTY']
+
+        gas_used = txs_intrinsic_gas
+        nonce = ''
+
+        block_number = prev_block.header.number + 1
+        timestamp = self.env.now
+        candidate_block_header = BlockHeader(
+            prev_block.header.hash,
+            tx_list_root,
+            block_number,
+            timestamp,
+            uncles_hash,
+            state_root,
+            receipts_root,
+            coinbase,
+            difficulty,
+            gas_limit_per_block,
+            txs_intrinsic_gas,
+            nonce)
+        return Block(candidate_block_header, pending_txs)
 
     def handshake(self, network: str, total_difficulty: int, best_hash: str, genesis_hash: str):
         """Handshake executes the ETH protocol handshake, negotiating network, difficulties,
@@ -70,13 +151,25 @@ class ETHNode(Node):
 
     def _read_envelope(self, envelope, connection):
         super()._read_envelope(envelope, connection)
-        if envelope.msg['id'] == 1:
+        if envelope.msg['id'] == 0:
             self._receive_status(envelope, connection)
+        if envelope.msg['id'] == 1:
+            self._receive_new_blocks(envelope, connection)
         if envelope.msg['id'] == 2:
             self._receive_transactions(envelope, connection)
 
     def _receive_status(self, envelope, connection):
         pass
+
+    def _receive_new_blocks(self, envelope, connection):
+        """Handle new blocks received.
+        The destination only receives the hash and number of the block. It is needed to
+        ask for the header and body."""
+        new_blocks = envelope.msg['new_blocks']
+        print('{} at {}: New blocks received {}'.format(
+            self.address, self.env.now, new_blocks))
+        lowest_block_number = min(block_number for _, block_number in new_blocks.items())
+        self.request_headers(lowest_block_number, len(new_blocks), 0, envelope.origin.address)
 
     def _receive_transactions(self, envelope, connection):
         """Handle transactions received"""
@@ -88,6 +181,17 @@ class ETHNode(Node):
         else:
             #TODO: validate_transaction('', tx)
             self.env.process(self.broadcast_transactions(transactions, None))
+
+    def send_new_blocks(self, new_blocks, upload_rate):
+        """Specify one or more new blocks which have appeared on the network.
+        To be maximally helpful, nodes should inform peers of all blocks that
+        they may not be aware of."""
+        _new_blocks = {}
+        for block in new_blocks:
+            _new_blocks[block.header.hash] = block.header.number
+
+        new_blocks_msg = Message(self).new_blocks(_new_blocks)
+        self.env.process(self.broadcast(upload_rate, new_blocks_msg))
 
     def send_block_headers(self, request: dict, destination_address: str, upload_rate):
         """Send block headers for any node that request it, identified by the `destination_address`
@@ -136,7 +240,7 @@ class ETHNode(Node):
                         max_headers: int,
                         reverse: int,
                         destination_address: str,
-                        upload_rate):
+                        upload_rate=None):
         """Request a node (identified by the `destination_address`) to return block headers.
 
         Request must contain a number of block headers, of rising number when `reverse` is `0`,

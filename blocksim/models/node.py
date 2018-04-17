@@ -112,8 +112,8 @@ class Node:
             yield self.env.timeout(self.download_rate)
 
     def send(self, destination_address: str, upload_rate, msg):
-        active_connection = self.active_sessions.get(destination_address)
-        print(active_connection)
+        node = self.active_sessions.get(destination_address)
+        active_connection = node.get('connection')
         if active_connection is None and msg['id'] == 0:
             # We do not have an active connection with the destination because its a ACK msg
             destination_node = self.network.get_node(destination_address)
@@ -125,14 +125,11 @@ class Node:
             raise RuntimeError('It is needed to initiate an ACK phase with {} before sending any other message'
                     .format(destination_address))
 
-        # The connection exist
-        # The destination node need to start listening on this connection
-        self.env.process(destination_node.listening_node(active_connection))
-
         if upload_rate is None:
             upload_rate = self.upload_rate
         yield self.env.timeout(upload_rate)
-        envelope = Envelope(msg, self.env.now, active_connection.destination_node, active_connection.origin_node)
+        envelope = Envelope(
+            msg, self.env.now, active_connection.destination_node, active_connection.origin_node)
         active_connection.put(envelope)
 
     def broadcast(self, upload_rate, msg):

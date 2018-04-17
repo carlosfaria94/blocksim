@@ -15,12 +15,19 @@ class Message:
         This message should be sent `after` the initial handshake and `prior` to any ethereum related messages.
         """
         return {
-            'id': 1,
+            'id': 0,
             'protocol_version': 'PV62',
             'network': self.origin_node.network.name,
             'td': self.origin_node.chain.head.header.difficulty,
             'best_hash': self.origin_node.chain.head.header.hash,
             'genesis_hash': self.origin_node.chain.genesis.header.hash,
+            'size': 10 # TODO: Measure the size message
+        }
+
+    def new_blocks(self, new_blocks: dict):
+        return {
+            'id': 1,
+            'new_blocks': new_blocks,
             'size': 10 # TODO: Measure the size message
         }
 
@@ -34,6 +41,7 @@ class Message:
             'transactions': transactions,
             'size': 10 # TODO: Measure the size message
         }
+
 
     def get_block_headers(self, block_number: int, max_headers: int, reverse: int):
         return {

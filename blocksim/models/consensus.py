@@ -20,5 +20,12 @@ def apply_transaction(state, tx):
     print('apply STF', state, tx)
 
 
-def validate_transaction(state, tx):
-    print('validate tx')
+def validate_transaction(env, duration, state, tx):
+    """Validates the transaction.
+    (1) the transaction is well-formed
+    (2) the transaction signature is valid
+    (3) the transaction nonce is valid (equivalent to the sender account’s current nonce)
+    (4) the gas limit is no smaller than the intrinsic gas (21000), used by the transaction
+    (5) the sender account balance contains at least the cost, required in up-front payment.
+    """
+    yield env.timeout(duration)
