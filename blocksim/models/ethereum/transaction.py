@@ -1,5 +1,6 @@
 from blocksim.utils import TT256, keccak_256, encode_hex, normalize_key, ecsign, privtoaddr
 from blocksim.exceptions import InvalidTransaction
+from blocksim.models.ethereum.config import default_config
 
 class Transaction:
     """ Defines the transaction model.
@@ -7,27 +8,32 @@ class Transaction:
     In Ethereum a transaction is stored as:
     :param int nonce: sequence number, issued by the originating EOA, used to prevent message replay
     :param gasprice: price of gas (in wei) the originator is willing to pay
-    :param startgas: maximum amount of gas the originator is willing to pay
+    :param startgas: maximum amount of gas the originator is willing to pay, also known as gaslimit
     :param to: destination Ethereum address
     :param value: amount of ether to send to destination
-    :param data: variable length binary data payload
 
     The three components of an ECDSA signature of the originating EOA:
     :param v: chain identifier (EIP-155 "Simple Replay Attack Protection")
     :param r
     :param s
-
     """
 
     _sender = None
 
-    def __init__(self, nonce, gasprice, startgas, to, value, data=None, v=0, r=0, s=0):
+    def __init__(self,
+                nonce,
+                gasprice,
+                to,
+                value,
+                startgas=default_config['TX_BASE_GAS_COST'],
+                v=0,
+                r=0,
+                s=0):
         self.nonce = nonce
         self.gasprice = gasprice
         self.startgas = startgas
         self.to = to
         self.value = value
-        self.data = data
         self.v = v
         self.r = r
         self.s = s
@@ -60,7 +66,7 @@ class Transaction:
 
         EIP155 spec:
         When computing the hash of a transaction for purposes of signing, instead of hashing
-        only the first six elements (ie. nonce, gasprice, startgas, to, value, data)
+        only the first six elements (ie. nonce, gasprice, startgas, to, value)
         hash nine elements, with v replaced by `chain_id`, `r = 0` and `s = 0`
         """
         assert 1 <= chain_id < 2**63 - 18
@@ -92,7 +98,7 @@ class Transaction:
 
     def __str__(self):
         """Returns a readable representation of the transaction"""
-        return f'''<{self.__class__.__name__}(nonce:{self.nonce} gasprice:{self.gasprice} startgas:{self.startgas} to:{self.to} value:{self.value} data:{self.data} v:{self.v} r:{self.r} s:{self.s})>'''
+        return f'''<{self.__class__.__name__}(nonce:{self.nonce} gasprice:{self.gasprice} startgas:{self.startgas} to:{self.to} value:{self.value} v:{self.v} r:{self.r} s:{self.s})>'''
 
     def __eq__(self, other):
         """Two transactions are equal iff they have the same hash."""
