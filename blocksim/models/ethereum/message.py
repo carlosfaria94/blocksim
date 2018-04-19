@@ -70,7 +70,7 @@ class Message:
             'size': 10 # TODO: Measure the size message
         }
 
-    def block_bodies(self, block_bodies: list):
+    def block_bodies(self, block_bodies: dict):
         """ Reply to `get_block_bodies`. The items in the list are some of the blocks, minus the header.
         This may contain no items if no blocks were able to be returned for the `get_block_bodies` message.
         """

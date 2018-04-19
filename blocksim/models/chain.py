@@ -27,12 +27,15 @@ class Chain:
 
     def get_block(self, block_hash):
         """Gets the block with a given block hash"""
-        return self.storage.get(block_hash)
+        try:
+            return self.storage.get(block_hash)
+        except BaseException:
+            return None
 
     def get_blockhash_by_number(self, number):
         """Gets the hash of the block with the given block number"""
         try:
-            return self.storage.get('block:{}'.format(number))
+            return self.storage.get(f'block:{number}')
         except BaseException:
             return None
 
@@ -74,7 +77,7 @@ class Chain:
         """Call upon receiving a block"""
         # Is the block being added to the heap?
         if block.header.prevhash == self._head_hash:
-            print('Adding block the head', head=block.header.prevhash[:4])
+            print(f'Adding block ({block.header.hash[:16]}) to the head', )
             try:
                 # TODO: Send state
                 state = {}
@@ -82,7 +85,7 @@ class Chain:
             except (AssertionError, KeyError, ValueError, InvalidTransaction, VerificationFailed) as e:
                 print('Block %d (%s) with parent %s invalid, reason: %s' % (block.header.number, block.header.hash[:4], block.header.prevhash[:4], str(e)))
                 return False
-            self.storage.put('block:{}'.format(block.header.number), block.header.hash)
+            self.storage.put(f'block:{block.header.number}', block.header.hash)
             self._head_hash = block.header.hash
         # Or is the block being added to a chain that is not currently the head?
         elif block.header.prevhash in self.storage:
@@ -91,8 +94,7 @@ class Chain:
                 temp_state = {}
                 apply_block(temp_state, block)
             except (AssertionError, KeyError, ValueError, InvalidTransaction, VerificationFailed) as e:
-                print('Block %s with parent %s invalid, reason: %s' %
-                    (block.header.hash[:4], block.header.prevhash[:4], str(e)))
+                print(f'Block {block.header.hash[:4]} with parent {block.header.prevhash[:4]} invalid, reason: {str(e)}')
                 return False
             # TODO: If the block should be the new head, replace the head
             #if block_score > self.get_score(self.head):
@@ -104,9 +106,10 @@ class Chain:
             self.parent_queue[block.header.prevhash].append(block)
             print('Got block %d (%s) with prevhash %s, parent not found. Delaying for now' % (block.header.number, block.header.hash[:4], block.header.prevhash[:4]))
             return False
+
         self.add_child(block)
 
-        self.storage.put(block.header.hash, block.header.hash)
+        self.storage.put(block.header.hash, block)
 
         # Are there blocks that we received that were waiting for this block?
         # If so, process them.
@@ -132,7 +135,8 @@ class Chain:
 
         header = block.header
         hashes = []
-        for i in range(max_num):
+        hashes.append(block.header.hash)
+        for i in range(max_num - 1): # We already have one block added to the hashes list
             block = self.get_block(header.prevhash)
             if block is None:
                 break

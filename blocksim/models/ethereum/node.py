@@ -23,6 +23,7 @@ class ETHNode(Node):
                         location,
                         address,
                         is_mining)
+        self.temp_headers = {}
 
     def init_mining(self,
                     duration_to_validate_tx,
@@ -53,15 +54,16 @@ class ETHNode(Node):
                 gas_limit_per_block,
                 txs_intrinsic_gas,
                 pending_txs)
-            print('{} at {}: New candidate block created {}'.format(
-                self.address, self.env.now, candidate_block.header))
+            print(f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:16]}')
 
             # Mine the block by simulating the resolution of a puzzle
             candidate_block = self._mine(candidate_block)
             yield self.env.timeout(duration_to_solve_puzzle)
 
-            print('{} at {}: Solved the cryptographic puzzle for the candidate block {}'.format(
-                self.address, self.env.now, candidate_block.header))
+            print(f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:16]}')
+
+            # Add the candidate block to the chain of the miner node
+            self.chain.add_block(candidate_block)
 
             # We need to broadcast the new candidate block across the network
             self.send_new_blocks([candidate_block], None)
@@ -151,12 +153,20 @@ class ETHNode(Node):
 
     def _read_envelope(self, envelope, connection):
         super()._read_envelope(envelope, connection)
-        if envelope.msg['id'] == 0:
+        if envelope.msg['id'] == 0: # status
             self._receive_status(envelope, connection)
-        if envelope.msg['id'] == 1:
+        if envelope.msg['id'] == 1: # new_blocks
             self._receive_new_blocks(envelope, connection)
-        if envelope.msg['id'] == 2:
+        if envelope.msg['id'] == 2: # transactions
             self._receive_transactions(envelope, connection)
+        if envelope.msg['id'] == 3: # get_block_headers
+            self.send_block_headers(envelope.msg, envelope.origin.address)
+        if envelope.msg['id'] == 4: # block_headers
+            self._receive_block_headers(envelope, connection)
+        if envelope.msg['id'] == 5: # get_block_bodies
+            self.send_block_bodies(envelope.msg, envelope.origin.address)
+        if envelope.msg['id'] == 6: # block_bodies
+            self._receive_block_bodies(envelope, connection)
 
     def _receive_status(self, envelope, connection):
         pass
@@ -182,6 +192,29 @@ class ETHNode(Node):
             #TODO: validate_transaction('', tx)
             self.env.process(self.broadcast_transactions(transactions, None))
 
+    def _receive_block_headers(self, envelope, connection):
+        """Handle block headers received"""
+        block_headers = envelope.msg.get('block_headers')
+        # Save the header in a temporary list
+        hashes = []
+        for header in block_headers:
+            self.temp_headers[header.hash] = header
+            hashes.append(header.hash)
+        self.request_bodies(hashes, envelope.origin.address)
+
+    def _receive_block_bodies(self, envelope, connection):
+        """Handle block bodies received
+        Assemble the block header in a temporary list with the block body received and
+        insert it in the blockchain"""
+        block_bodies = envelope.msg.get('block_bodies')
+        for block_hash, block_txs in block_bodies.items():
+            if block_hash in self.temp_headers:
+                header = self.temp_headers.get(block_hash)
+                new_block = Block(header, block_txs)
+                self.chain.add_block(new_block)
+                del self.temp_headers[block_hash]
+        print(f'{self.address} at {self.env.now}: {len(block_bodies)} Block(s) assembled and added to the blockchain')
+
     def send_new_blocks(self, new_blocks, upload_rate):
         """Specify one or more new blocks which have appeared on the network.
         To be maximally helpful, nodes should inform peers of all blocks that
@@ -193,7 +226,7 @@ class ETHNode(Node):
         new_blocks_msg = Message(self).new_blocks(_new_blocks)
         self.env.process(self.broadcast(upload_rate, new_blocks_msg))
 
-    def send_block_headers(self, request: dict, destination_address: str, upload_rate):
+    def send_block_headers(self, request: dict, destination_address: str, upload_rate=None):
         """Send block headers for any node that request it, identified by the `destination_address`
         ```
         request = { 
@@ -206,6 +239,7 @@ class ETHNode(Node):
         block_number = request.get('block_number', 0)
         max_headers = request.get('max_headers', 1)
         reverse = request.get('reverse', 1)
+        print(f'{self.address} at {self.env.now}: {max_headers} Block header(s) preapred to send')
 
         block_hash = self.chain.get_blockhash_by_number(block_number)
         block_hashes = self.chain.get_blockhashes_from_hash(block_hash, max_headers)
@@ -220,17 +254,21 @@ class ETHNode(Node):
         block_headers_msg = Message(self).block_headers(block_headers)
         self.env.process(self.send(destination_address, upload_rate, block_headers_msg))
 
-    def send_block_bodies(self, request: dict, destination_address: str, upload_rate):
+    def send_block_bodies(self, request: dict, destination_address: str, upload_rate=None):
         """Send block bodies for any node that request it, identified by the `destination_address`.
 
         In `request['hashes']` we obtain a list of hashes of block bodies being requested
+
+        For now it only contains the transactions
         """
         hashes = request.get('hashes')
 
-        block_bodies = []
+        block_bodies = {}
         for block_hash in hashes:
             block = self.chain.get_block(block_hash)
-            block_bodies.append(block)
+            block_bodies[block.header.hash] = block.transactions
+
+        print(f'{self.address} at {self.env.now}: {len(block_bodies)} Block bodies(s) preapred to send')
 
         block_bodies_msg = Message(self).block_bodies(block_bodies)
         self.env.process(self.send(destination_address, upload_rate, block_bodies_msg))
@@ -250,7 +288,7 @@ class ETHNode(Node):
         get_block_headers_msg = Message(self).get_block_headers(block_number, max_headers, reverse)
         self.env.process(self.send(destination_address, upload_rate, get_block_headers_msg))
 
-    def request_bodies(self, hashes: list, destination_address: str, upload_rate):
+    def request_bodies(self, hashes: list, destination_address: str, upload_rate=None):
         """Request a node (identified by the `destination_address`) to return block bodies.
         Specify a list of `hashes` that we're interested in.
         """

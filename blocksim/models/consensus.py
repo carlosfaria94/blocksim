@@ -12,12 +12,12 @@ null_address = b'\xff' * 20
 
 def apply_block(state, block):
     """Applies the block-level state transition function"""
-    print('apply block', state, block)
+    pass
 
 
 def apply_transaction(state, tx):
     """Applies the state transition function"""
-    print('apply STF', state, tx)
+    pass
 
 
 def validate_transaction(env, duration, state, tx):
