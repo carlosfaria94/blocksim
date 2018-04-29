@@ -10,6 +10,7 @@ and `apply_block(state, block)`.
 
 null_address = b'\xff' * 20
 
+
 def apply_block(state, block):
     """Applies the block-level state transition function"""
     pass

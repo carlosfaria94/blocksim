@@ -1,4 +1,4 @@
-class Storage:
+class BaseDB:
     def __init__(self):
         self.db = {}
 

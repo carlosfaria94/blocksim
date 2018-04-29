@@ -13,6 +13,7 @@ from py_ecc.secp256k1 import privtopub, ecdsa_raw_sign
 
 TT256 = 2 ** 256
 
+
 def decode_hex(s):
     if isinstance(s, str):
         return bytes.fromhex(s)
@@ -28,11 +29,14 @@ def encode_hex(b):
         return str(binascii.hexlify(b), 'utf-8')
     raise TypeError('Value must be an instance of str or bytes')
 
+
 def is_numeric(x):
     return isinstance(x, int)
 
+
 def encode_int32(v):
     return v.to_bytes(32, byteorder='big')
+
 
 def normalize_key(key):
     if is_numeric(key):
@@ -49,9 +53,11 @@ def normalize_key(key):
         raise Exception("Zero privkey invalid")
     return o
 
+
 def ecsign(rawhash, key):
     v, r, s = ecdsa_raw_sign(rawhash, key)
     return v, r, s
+
 
 def privtoaddr(k):
     k = normalize_key(k)

@@ -1,6 +1,7 @@
 from blocksim.models.ethereum.config import default_config
 from blocksim.utils import keccak_256, encode_hex
 
+
 class BlockHeader:
     """ Defines the BlockHeader model for the Ethereum.
 
@@ -17,19 +18,20 @@ class BlockHeader:
     :param int gas_used: the total amount of gas used by all transactions in this block
     :param str nonce: a nonce constituting a Proof-of-Work
     """
+
     def __init__(self,
-                prevhash=default_config['GENESIS_PREVHASH'],
-                tx_list_root=default_config['BLANK_ROOT'],
-                number=default_config['GENESIS_NUMBER'],
-                timestamp=default_config['GENESIS_TIMESTAMP'],
-                uncles_hash=default_config['BLANK_ROOT'],
-                state_root=default_config['BLANK_ROOT'],
-                receipts_root=default_config['BLANK_ROOT'],
-                coinbase=default_config['GENESIS_COINBASE'],
-                difficulty=default_config['GENESIS_DIFFICULTY'],
-                gas_limit=default_config['GENESIS_GAS_LIMIT'],
-                gas_used=0,
-                nonce=''):
+                 prevhash=default_config['GENESIS_PREVHASH'],
+                 tx_list_root=default_config['BLANK_ROOT'],
+                 number=default_config['GENESIS_NUMBER'],
+                 timestamp=default_config['GENESIS_TIMESTAMP'],
+                 uncles_hash=default_config['BLANK_ROOT'],
+                 state_root=default_config['BLANK_ROOT'],
+                 receipts_root=default_config['BLANK_ROOT'],
+                 coinbase=default_config['GENESIS_COINBASE'],
+                 difficulty=default_config['GENESIS_DIFFICULTY'],
+                 gas_limit=default_config['GENESIS_GAS_LIMIT'],
+                 gas_used=0,
+                 nonce=''):
         self.prevhash = prevhash
         self.tx_list_root = tx_list_root
         self.number = number
@@ -73,6 +75,7 @@ class Block:
     :param header: the block header
     :param transactions: a list of transactions
     """
+
     def __init__(self, header: BlockHeader, transactions=None):
         self.header = header
         self.transactions = transactions

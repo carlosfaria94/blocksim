@@ -2,6 +2,7 @@ from blocksim.utils import TT256, keccak_256, encode_hex, normalize_key, ecsign,
 from blocksim.exceptions import InvalidTransaction
 from blocksim.models.ethereum.config import default_config
 
+
 class Transaction:
     """ Defines the transaction model.
 
@@ -21,14 +22,14 @@ class Transaction:
     _sender = None
 
     def __init__(self,
-                nonce,
-                gasprice,
-                to,
-                value,
-                startgas=default_config['TX_BASE_GAS_COST'],
-                v=0,
-                r=0,
-                s=0):
+                 nonce,
+                 gasprice,
+                 to,
+                 value,
+                 startgas=default_config['TX_BASE_GAS_COST'],
+                 v=0,
+                 r=0,
+                 s=0):
         self.nonce = nonce
         self.gasprice = gasprice
         self.startgas = startgas

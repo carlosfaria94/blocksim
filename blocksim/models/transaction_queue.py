@@ -1,5 +1,6 @@
 import simpy
 
+
 class TransactionQueue():
     def __init__(self, env, delay, node):
         self.env = env
@@ -11,11 +12,11 @@ class TransactionQueue():
         yield self.env.timeout(self.delay)
         self.store.put(tx)
         print('{} at {}: Transaction {} added to the queue'
-            .format(
-                self.node.address,
-                self.env.now,
-                tx.hash[:8]
-            ))
+              .format(
+                  self.node.address,
+                  self.env.now,
+                  tx.hash[:8]
+              ))
 
     def put(self, tx):
         self.env.process(self.latency(tx))

@@ -1,14 +1,18 @@
 from collections import namedtuple
 
 from blocksim.models.network import Connection, Network
+from blocksim.models.db import BaseDB
 from blocksim.models.chain import Chain
 from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.transaction_queue import TransactionQueue
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
 
-MAX_KNOWN_TXS = 30000 # Maximum transactions hashes to keep in the known list (prevent DOS)
-MAX_KNOWN_BLOCKS = 1024 # Maximum block hashes to keep in the known list (prevent DOS)
+# Maximum transactions hashes to keep in the known list (prevent DOS)
+MAX_KNOWN_TXS = 30000
+# Maximum block hashes to keep in the known list (prevent DOS)
+MAX_KNOWN_BLOCKS = 1024
+
 
 class Node:
     """This class represents the node.
@@ -23,15 +27,16 @@ class Node:
 
     In order to a node to be identified in the network simulation, is needed to have an `address`
     """
+
     def __init__(self,
-                env,
-                network: Network,
-                transmission_speed,
-                download_rate,
-                upload_rate,
-                location: str,
-                address: str,
-                is_mining=False):
+                 env,
+                 network: Network,
+                 transmission_speed,
+                 download_rate,
+                 upload_rate,
+                 location: str,
+                 address: str,
+                 is_mining=False):
         self.env = env
         self.network = network
         self.transmission_speed = transmission_speed
@@ -46,7 +51,9 @@ class Node:
         self.transaction_queue = TransactionQueue(env, 2, self)
         # Create genesis block and init the chain
         genesis = Block(BlockHeader())
-        self.chain = Chain(genesis)
+        # Create a database to this node
+        db = BaseDB()
+        self.chain = Chain(genesis, db)
         # Join the node to the network
         self.network.add_node(self)
         self.connecting = None
@@ -60,16 +67,19 @@ class Node:
                 'knownTxs': {''},
                 'knownBlocks': {''}
             }
-            self.connecting = self.env.process(self._connecting(upload_rate, node, connection))
+            self.connecting = self.env.process(
+                self._connecting(upload_rate, node, connection))
 
     def _connecting(self, upload_rate, node, connection):
         """Simulates the time needed to perform TCP handshake and acknowledgement phase"""
         # TODO: Calculate a delay/timeout do simulate the TCP handshake + HELLO ACK protocol
         # TODO: Message size?
         yield self.env.timeout(upload_rate)
-        print('{} at {}: Connection established with {}'.format(self.address, self.env.now, node.address))
+        print('{} at {}: Connection established with {}'.format(
+            self.address, self.env.now, node.address))
         # Start listening for messages from the destination node
-        self.env.process(connection.destination_node.listening_node(connection))
+        self.env.process(
+            connection.destination_node.listening_node(connection))
 
     def _mark_block(self, block_hash: str, node_address: str):
         """Marks a block as known for a specific node, ensuring that it will never be
@@ -95,16 +105,16 @@ class Node:
 
     def _read_envelope(self, envelope, connection):
         print('{} at {}: Receive a message (ID: {}) created at {} from {}'.format(
-                self.address,
-                self.env.now,
-                envelope.msg['id'],
-                envelope.timestamp,
-                envelope.origin.address
-            ))
+            self.address,
+            self.env.now,
+            envelope.msg['id'],
+            envelope.timestamp,
+            envelope.origin.address
+        ))
 
     def listening_node(self, connection):
         print('{} at {}: Listening for connections from the {}'
-            .format(self.address, self.env.now, connection.origin_node.address))
+              .format(self.address, self.env.now, connection.origin_node.address))
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
@@ -123,7 +133,7 @@ class Node:
         elif active_connection is None and msg['id'] != 0:
             # We do not have a connection and the message is not an ACK
             raise RuntimeError('It is needed to initiate an ACK phase with {} before sending any other message'
-                    .format(destination_address))
+                               .format(destination_address))
 
         if upload_rate is None:
             upload_rate = self.upload_rate
@@ -141,7 +151,7 @@ class Node:
 
             if connection is None:
                 raise RuntimeError('Not possible to create a direct connection with the node {}'
-                    .format(node_address))
+                                   .format(node_address))
 
             # TODO: Calculate a delay/timeout do simulate the TCP handshake ??
             yield self.env.timeout(3)
@@ -149,5 +159,6 @@ class Node:
             if upload_rate is None:
                 upload_rate = self.upload_rate
             yield self.env.timeout(upload_rate)
-            envelope = Envelope(msg, self.env.now, connection.destination_node, connection.origin_node)
+            envelope = Envelope(
+                msg, self.env.now, connection.destination_node, connection.origin_node)
             connection.put(envelope)

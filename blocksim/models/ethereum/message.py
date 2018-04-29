@@ -1,11 +1,13 @@
-from blocksim.models.node import Node
+from blocksim.models.ethereum.node import ETHNode
+
 
 class Message:
     """Defines a model for the network messages of the Ethereum blockchain.
 
     For each message its calculated the size, taking into account measurements from the live and public network.
     """
-    def __init__(self, origin_node: Node):
+
+    def __init__(self, origin_node: ETHNode):
         self.origin_node = origin_node
 
     # TODO: We need to calculate the real size for each message (we need to measure from a real network)
@@ -21,14 +23,14 @@ class Message:
             'td': self.origin_node.chain.head.header.difficulty,
             'best_hash': self.origin_node.chain.head.header.hash,
             'genesis_hash': self.origin_node.chain.genesis.header.hash,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
 
     def new_blocks(self, new_blocks: dict):
         return {
             'id': 1,
             'new_blocks': new_blocks,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
 
     def transactions(self, transactions: list):
@@ -39,9 +41,8 @@ class Message:
         return {
             'id': 2,
             'transactions': transactions,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
-
 
     def get_block_headers(self, block_number: int, max_headers: int, reverse: int):
         return {
@@ -49,7 +50,7 @@ class Message:
             'block_number': block_number,
             'max_headers': max_headers,
             'reverse': reverse,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
 
     def block_headers(self, block_headers: list):
@@ -60,14 +61,14 @@ class Message:
         return {
             'id': 4,
             'block_headers': block_headers,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
 
     def get_block_bodies(self, hashes: list):
         return {
             'id': 5,
             'hashes': hashes,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
 
     def block_bodies(self, block_bodies: dict):
@@ -77,5 +78,5 @@ class Message:
         return {
             'id': 6,
             'block_bodies': block_bodies,
-            'size': 10 # TODO: Measure the size message
+            'size': 10  # TODO: Measure the size message
         }
