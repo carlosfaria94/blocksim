@@ -1,9 +1,7 @@
 from collections import namedtuple
 
 from blocksim.models.network import Connection, Network
-from blocksim.models.db import BaseDB
 from blocksim.models.chain import Chain
-from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.transaction_queue import TransactionQueue
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
@@ -36,6 +34,7 @@ class Node:
                  upload_rate,
                  location: str,
                  address: str,
+                 chain: Chain,
                  is_mining=False):
         self.env = env
         self.network = network
@@ -44,16 +43,12 @@ class Node:
         self.upload_rate = upload_rate
         self.location = location
         self.address = address
+        self.chain = chain
         self.is_mining = is_mining
         self.active_sessions = {}
         # Transaction Queue to store the transactions
         # TODO: The transaction queue delay is hard coded
         self.transaction_queue = TransactionQueue(env, 2, self)
-        # Create genesis block and init the chain
-        genesis = Block(BlockHeader())
-        # Create a database to this node
-        db = BaseDB()
-        self.chain = Chain(genesis, db)
         # Join the node to the network
         self.network.add_node(self)
         self.connecting = None

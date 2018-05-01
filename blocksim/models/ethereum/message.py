@@ -1,13 +1,10 @@
-from blocksim.models.ethereum.node import ETHNode
-
-
 class Message:
     """Defines a model for the network messages of the Ethereum blockchain.
 
     For each message its calculated the size, taking into account measurements from the live and public network.
     """
 
-    def __init__(self, origin_node: ETHNode):
+    def __init__(self, origin_node):
         self.origin_node = origin_node
 
     # TODO: We need to calculate the real size for each message (we need to measure from a real network)

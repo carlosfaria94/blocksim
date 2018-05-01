@@ -2,9 +2,7 @@
 BlockSim
 ========
 
-A discrete event **Blockchain Simulator**.
-
-Initially written to simulate Ethereum. However, with a goal to be used as tool to simulate any blockchain.
+A discrete event **Blockchain Simulator**, used to simulate Bitcoin and Ethereum.
 
 Abstract
 --------
