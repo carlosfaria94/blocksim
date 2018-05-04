@@ -8,11 +8,10 @@ class Transaction:
     parameters:
 
     :param to: destination address
-    :param from: sender address
+    :param sender: sender address
     :param value: amount to send to destination
     :param signature: sender signature
-    :param fee: a fee destinated to the node that will insert the transaction
-    on the chain
+    :param fee: a fee destinated to the node that will insert the transaction on the chain
     """
 
     def __init__(self,

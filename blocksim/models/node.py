@@ -2,7 +2,6 @@ from collections import namedtuple
 
 from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
-from blocksim.models.transaction_queue import TransactionQueue
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
 
@@ -34,8 +33,7 @@ class Node:
                  upload_rate,
                  location: str,
                  address: str,
-                 chain: Chain,
-                 is_mining=False):
+                 chain: Chain):
         self.env = env
         self.network = network
         self.transmission_speed = transmission_speed
@@ -44,11 +42,7 @@ class Node:
         self.location = location
         self.address = address
         self.chain = chain
-        self.is_mining = is_mining
         self.active_sessions = {}
-        # Transaction Queue to store the transactions
-        # TODO: The transaction queue delay is hard coded
-        self.transaction_queue = TransactionQueue(env, 2, self)
         # Join the node to the network
         self.network.add_node(self)
         self.connecting = None
@@ -98,14 +92,9 @@ class Node:
         node['knownTxs'] = known_txs
         self.active_sessions[node_address] = node
 
-    def _read_envelope(self, envelope, connection):
-        print('{} at {}: Receive a message (ID: {}) created at {} from {}'.format(
-            self.address,
-            self.env.now,
-            envelope.msg['id'],
-            envelope.timestamp,
-            envelope.origin.address
-        ))
+    def _read_envelope(self, envelope):
+        print(
+            f'{self.address} at {self.env.now}: Receive a message (ID: {envelope.msg["id"]}) created at {envelope.timestamp} from {envelope.origin.address}')
 
     def listening_node(self, connection):
         print('{} at {}: Listening for connections from the {}'
@@ -113,7 +102,7 @@ class Node:
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
-            self._read_envelope(envelope, connection)
+            self._read_envelope(envelope)
             yield self.env.timeout(self.download_rate)
 
     def send(self, destination_address: str, upload_rate, msg):
@@ -127,8 +116,8 @@ class Node:
             yield self.env.timeout(3)
         elif active_connection is None and msg['id'] != 0:
             # We do not have a connection and the message is not an ACK
-            raise RuntimeError('It is needed to initiate an ACK phase with {} before sending any other message'
-                               .format(destination_address))
+            raise RuntimeError(
+                f'It is needed to initiate an ACK phase with {destination_address} before sending any other message')
 
         if upload_rate is None:
             upload_rate = self.upload_rate

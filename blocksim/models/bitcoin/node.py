@@ -3,6 +3,7 @@ from blocksim.models.network import Network
 from blocksim.models.bitcoin.message import Message
 from blocksim.models.chain import Chain
 from blocksim.models.db import BaseDB
+from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
 from blocksim.models.bitcoin.config import default_config
 
@@ -27,11 +28,18 @@ class BTCNode(Node):
                          upload_rate,
                          location,
                          address,
-                         chain,
-                         is_mining)
+                         chain)
+        self.is_mining = is_mining
         self.temp_headers = {}
         self.temp_txs = {}
         self.tx_on_transit = {}
+        if is_mining:
+            # Transaction Queue to store the transactions
+            # TODO: The transaction queue delay is hard coded
+            self.transaction_queue = TransactionQueue(env, 2, self)
+            # TODO: The mining delays hard coded
+            env.process(self.init_mining(2, 15, 3))
+        self.network_message = Message(self)
 
     def init_mining(self,
                     duration_to_validate_tx,
@@ -100,8 +108,8 @@ class BTCNode(Node):
             nonce)
         return Block(candidate_block_header, pending_txs)
 
-    def _read_envelope(self, envelope, connection):
-        super()._read_envelope(envelope, connection)
+    def _read_envelope(self, envelope):
+        super()._read_envelope(envelope)
         if envelope.msg['id'] == 'inv':
             if envelope.msg['type'] == 'block':
                 self._receive_new_blocks(envelope)
@@ -160,7 +168,7 @@ class BTCNode(Node):
         for block in new_blocks:
             new_blocks_hashes.append(block.header.hash)
 
-        new_blocks_msg = Message(self).inv(new_blocks_hashes, 'block')
+        new_blocks_msg = self.network_message.inv(new_blocks_hashes, 'block')
         self.env.process(self.broadcast(upload_rate, new_blocks_msg))
 
     def broadcast_transactions(self, transactions: list, upload_rate):
@@ -184,7 +192,8 @@ class BTCNode(Node):
         if transactions_hashes:
             print(
                 f'{self.address} at {self.env.now}: {len(transactions_hashes)} transaction(s) ready to be announced')
-            transactions_msg = Message(self).inv(transactions_hashes, 'tx')
+            transactions_msg = self.network_message.inv(
+                transactions_hashes, 'tx')
 
             self.env.process(self.broadcast(upload_rate, transactions_msg))
 
@@ -214,7 +223,7 @@ class BTCNode(Node):
                 print(
                     f'{self.address} at {self.env.now}: Full transaction {tx.hash[:8]} preapred to send')
 
-                tx_msg = Message(self).tx(tx)
+                tx_msg = self.network_message.tx(tx)
                 self.env.process(
                     self.send(envelope.origin.address, None, tx_msg))
 
@@ -228,12 +237,12 @@ class BTCNode(Node):
             print(
                 f'{self.address} at {self.env.now}: Block {block.header.hash[:8]} preapred to send')
 
-            block_bodies_msg = Message(self).block(block)
+            block_bodies_msg = self.network_message.block(block)
             self.env.process(
                 self.send(envelope.origin.address, None, block_bodies_msg))
 
     def request_bodies(self, hashes: list, destination_address: str, upload_rate=None):
-        get_data_msg = Message(self).get_data(hashes, 'block')
+        get_data_msg = self.network_message.get_data(hashes, 'block')
         self.env.process(
             self.send(destination_address, upload_rate, get_data_msg))
 
@@ -241,7 +250,7 @@ class BTCNode(Node):
         # Mark transaction on transit
         for tx_hash in hashes:
             self.tx_on_transit[tx_hash] = tx_hash
-        get_data_msg = Message(self).get_data(hashes, 'tx')
+        get_data_msg = self.network_message.get_data(hashes, 'tx')
         self.env.process(
             self.send(destination_address, upload_rate, get_data_msg))
 
@@ -275,7 +284,7 @@ class BTCNode(Node):
         print(
             f'{self.address} at {self.env.now}: {len(block_headers)} Block header(s) preapred to send')
 
-        headers_msg = Message(self).headers(block_headers)
+        headers_msg = self.network_message.headers(block_headers)
         self.env.process(
             self.send(envelope.origin.address, None, headers_msg))
 
@@ -284,7 +293,7 @@ class BTCNode(Node):
                         hash_stop: str,
                         destination_address: str,
                         upload_rate=None):
-        get_headers_msg = Message(self).get_headers(
+        get_headers_msg = self.network_message.get_headers(
             block_locator_hash, hash_stop)
         self.env.process(
             self.send(destination_address, upload_rate, get_headers_msg))

@@ -4,6 +4,7 @@ from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.ethereum.message import Message
 from blocksim.models.chain import Chain
 from blocksim.models.db import BaseDB
+from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.ethereum.config import default_config
 
 
@@ -27,9 +28,16 @@ class ETHNode(Node):
                          upload_rate,
                          location,
                          address,
-                         chain,
-                         is_mining)
+                         chain)
+        self.is_mining = is_mining
         self.temp_headers = {}
+        if is_mining:
+            # Transaction Queue to store the transactions
+            # TODO: The transaction queue delay is hard coded
+            self.transaction_queue = TransactionQueue(env, 2, self)
+            # TODO: The mining delays hard coded
+            env.process(self.init_mining(2, 15))
+        self.network_message = Message(self)
 
     def init_mining(self,
                     duration_to_validate_tx,
@@ -91,8 +99,6 @@ class ETHNode(Node):
         coinbase = default_config['GENESIS_COINBASE']
         # TODO: Mining difficulty
         difficulty = default_config['GENESIS_DIFFICULTY']
-
-        gas_used = txs_intrinsic_gas
         nonce = ''
 
         block_number = prev_block.header.number + 1
@@ -146,7 +152,7 @@ class ETHNode(Node):
         if transactions:
             print(
                 f'{self.address} at {self.env.now}: {len(transactions)} transactions ready to be sent')
-            transactions_msg = Message(self).transactions(transactions)
+            transactions_msg = self.network_message.transactions(transactions)
 
             # TODO: We need first know the status of the other node and then broadcast
             connection = node.get('connection')
@@ -156,14 +162,14 @@ class ETHNode(Node):
             self.env.process(self.broadcast(upload_rate, transactions_msg))
 
     def send_status(self, destination_address: str, upload_rate):
-        status_msg = Message(self).status()
+        status_msg = self.network_message.status()
         self.env.process(
             self.send(destination_address, upload_rate, status_msg))
 
-    def _read_envelope(self, envelope, connection):
-        super()._read_envelope(envelope, connection)
+    def _read_envelope(self, envelope):
+        super()._read_envelope(envelope)
         if envelope.msg['id'] == 0:  # status
-            self._receive_status(envelope, connection)
+            self._receive_status(envelope)
         if envelope.msg['id'] == 1:  # new_blocks
             self._receive_new_blocks(envelope)
         if envelope.msg['id'] == 2:  # transactions
@@ -177,7 +183,7 @@ class ETHNode(Node):
         if envelope.msg['id'] == 6:  # block_bodies
             self._receive_block_bodies(envelope)
 
-    def _receive_status(self, envelope, connection):
+    def _receive_status(self, envelope):
         pass
 
     def _receive_new_blocks(self, envelope):
@@ -233,7 +239,7 @@ class ETHNode(Node):
         for block in new_blocks:
             new_blocks_hashes[block.header.hash] = block.header.number
 
-        new_blocks_msg = Message(self).new_blocks(new_blocks_hashes)
+        new_blocks_msg = self.network_message.new_blocks(new_blocks_hashes)
         self.env.process(self.broadcast(upload_rate, new_blocks_msg))
 
     def _send_block_headers(self, envelope):
@@ -256,7 +262,7 @@ class ETHNode(Node):
         print(
             f'{self.address} at {self.env.now}: {len(block_headers)} Block header(s) preapred to send')
 
-        block_headers_msg = Message(self).block_headers(block_headers)
+        block_headers_msg = self.network_message.block_headers(block_headers)
         self.env.process(
             self.send(envelope.origin.address, None, block_headers_msg))
 
@@ -277,7 +283,7 @@ class ETHNode(Node):
         print(
             f'{self.address} at {self.env.now}: {len(block_bodies)} Block bodies(s) preapred to send')
 
-        block_bodies_msg = Message(self).block_bodies(block_bodies)
+        block_bodies_msg = self.network_message.block_bodies(block_bodies)
         self.env.process(
             self.send(envelope.origin.address, None, block_bodies_msg))
 
@@ -293,15 +299,15 @@ class ETHNode(Node):
         falling when `1`, beginning at `block_number`.
         At most `max_headers` items.
         """
-        get_block_headers_msg = Message(self).get_block_headers(
+        get_block_headers_msg = self.network_message.get_block_headers(
             block_number, max_headers, reverse)
-        self.env.process(self.send(destination_address,
-                                   upload_rate, get_block_headers_msg))
+        self.env.process(
+            self.send(destination_address, upload_rate, get_block_headers_msg))
 
     def request_bodies(self, hashes: list, destination_address: str, upload_rate=None):
         """Request a node (identified by the `destination_address`) to return block bodies.
         Specify a list of `hashes` that we're interested in.
         """
-        get_block_bodies_msg = Message(self).get_block_bodies(hashes)
+        get_block_bodies_msg = self.network_message.get_block_bodies(hashes)
         self.env.process(self.send(destination_address,
                                    upload_rate, get_block_bodies_msg))

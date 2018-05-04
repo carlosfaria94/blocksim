@@ -28,9 +28,13 @@ def run_simulation(env):
 
     node_lisbon = BTCNode(env, network, 1, 2, 3,
                           'Lisbon', 'lisbon-address', True)
-    env.process(node_lisbon.init_mining(2, 15, 3))
+    node_lisbon2 = BTCNode(env, network, 1, 2, 3,
+                           'Lisbon', 'lisbon2-address', True)
     node_berlin = BTCNode(env, network, 1, 2, 3, 'Berlin', 'berlin-address')
+
     node_berlin.connect(5, node_lisbon)
+    node_berlin.connect(2, node_lisbon2)
+    node_lisbon2.connect(3, node_berlin)
     node_lisbon.connect(6, node_berlin)
 
     first_tx = Transaction(
