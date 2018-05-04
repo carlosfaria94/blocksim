@@ -36,21 +36,6 @@ class ETHTransaction(Transaction):
         """The transaction hash calculated using Keccak 256"""
         return encode_hex(keccak_256(str(self).encode('utf-8')))
 
-    def __repr__(self):
-        """Returns a unambiguous representation of the transaction"""
-        return f'<{self.__class__.__name__}({self.hash})>'
-
-    def __str__(self):
-        """Returns a readable representation of the transaction"""
-        return f'''<{self.__class__.__name__}(nonce:{self.nonce} gasprice:{self.gasprice} startgas:{self.startgas} to:{self.to} value:{self.value} v:{self.v} r:{self.r} s:{self.s})>'''
-
-    def __eq__(self, other):
-        """Two transactions are equal iff they have the same hash."""
-        return isinstance(other, self.__class__) and self.hash == other.hash
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def __lt__(self, other):
         return isinstance(other, self.__class__) and self.gasprice < other.gasprice
 

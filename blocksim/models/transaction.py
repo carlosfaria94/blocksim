@@ -42,7 +42,7 @@ class Transaction:
 
     def __str__(self):
         """Returns a readable representation of the transaction"""
-        return f'''<{self.__class__.__name__}(to:{self.to} from:{self.value} value:{self.value} signature:{self.signature} fee:{self.fee})>'''
+        return f'''<{self.__class__.__name__}(to:{self.to} sender:{self.sender} value:{self.value} signature:{self.signature} fee:{self.fee})>'''
 
     def __eq__(self, other):
         """Two transactions are equal iff they have the same hash."""

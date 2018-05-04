@@ -1,4 +1,4 @@
-from blocksim.utils import encode_hex, keccak_256
+from blocksim.utils import encode_hex
 
 default_config = dict(
     GENESIS_DIFFICULTY=131072,
