@@ -174,7 +174,7 @@ class ETHNode(Node):
             self._receive_new_blocks(envelope)
         if envelope.msg['id'] == 2:  # transactions
             self._receive_transactions(envelope)
-        if envelope.msg['id'] == 3:  # get_block_headers
+        if envelope.msg['id'] == 3:  # get_headers_msg
             self._send_block_headers(envelope)
         if envelope.msg['id'] == 4:  # block_headers
             self._receive_block_headers(envelope)
@@ -273,10 +273,8 @@ class ETHNode(Node):
 
         For now it only contains the transactions
         """
-        hashes = envelope.msg.get('hashes')
-
         block_bodies = {}
-        for block_hash in hashes:
+        for block_hash in envelope.msg.get('hashes'):
             block = self.chain.get_block(block_hash)
             block_bodies[block.header.hash] = block.transactions
 
@@ -299,10 +297,10 @@ class ETHNode(Node):
         falling when `1`, beginning at `block_number`.
         At most `max_headers` items.
         """
-        get_block_headers_msg = self.network_message.get_block_headers(
+        get_headers_msg = self.network_message.get_headers(
             block_number, max_headers, reverse)
         self.env.process(
-            self.send(destination_address, upload_rate, get_block_headers_msg))
+            self.send(destination_address, upload_rate, get_headers_msg))
 
     def request_bodies(self, hashes: list, destination_address: str, upload_rate=None):
         """Request a node (identified by the `destination_address`) to return block bodies.

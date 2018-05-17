@@ -154,19 +154,20 @@ class BTCNode(Node):
 
     def _receive_new_blocks(self, envelope):
         """Handle new blocks received.
-        The destination only receives the hash and number of the block. It is needed to
-        ask for the header and body."""
+        The destination only receives the hash and number of the block. It is needed 
+        to ask for the header and body."""
         new_blocks = envelope.msg.get('hashes')
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
-        # TODO: hash_stop - we can send the hash tip of the node requesting the headers
-        # TODO: This need to be improved, we need send all the hashes?
-        self.request_headers(new_blocks[0], '', envelope.origin.address)
+        lowest_block_number = min(
+            block_number for _, block_number in new_blocks.items())
+        self.request_headers(
+            lowest_block_number, len(new_blocks), 0, envelope.origin.address)
 
     def broadcast_new_blocks(self, new_blocks, upload_rate):
         """Specify one or more new blocks which have appeared on the network."""
-        new_blocks_hashes = []
+        new_blocks_hashes = {}
         for block in new_blocks:
-            new_blocks_hashes.append(block.header.hash)
+            new_blocks_hashes[block.header.hash] = block.header.number
 
         new_blocks_msg = self.network_message.inv(new_blocks_hashes, 'block')
         self.env.process(self.broadcast(upload_rate, new_blocks_msg))
@@ -200,7 +201,7 @@ class BTCNode(Node):
     def _receive_block(self, envelope):
         """Handle block bodies received
         Assemble the block header in a temporary list with the block body received and
-        insert it in the blockchain"""
+        inserted into the blockchain"""
         block = envelope.msg.get('block')
         if block.header.hash in self.temp_headers:
             header = self.temp_headers.get(block.header.hash)
@@ -269,17 +270,24 @@ class BTCNode(Node):
 
     def _send_headers(self, envelope):
         """Send block headers for any node that request it, identified by the `destination_address`"""
-        block_locator_hash = envelope.msg.get('block_locator_hash')
-        hash_stop = envelope.msg.get('hash_stop')  # TODO: Use hash_stop
-        MAX_HEADERS = 2000  # Max number of headers
+        block_number = envelope.msg.get('block_number', 0)
+        max_headers = envelope.msg.get('max_headers', 1)
+        reverse = envelope.msg.get('reverse', 1)
 
+        # In bitcoin we can only send a maximum of 20000 block headers
+        if max_headers > 2000:
+            max_headers = 2000
+
+        block_hash = self.chain.get_blockhash_by_number(block_number)
         block_hashes = self.chain.get_blockhashes_from_hash(
-            block_locator_hash, MAX_HEADERS)
+            block_hash, max_headers)
 
         block_headers = []
         for _block_hash in block_hashes:
             block_header = self.chain.get_block(_block_hash).header
             block_headers.append(block_header)
+        if reverse == 0:
+            block_headers.reverse()
 
         print(
             f'{self.address} at {self.env.now}: {len(block_headers)} Block header(s) preapred to send')
@@ -289,11 +297,12 @@ class BTCNode(Node):
             self.send(envelope.origin.address, None, headers_msg))
 
     def request_headers(self,
-                        block_locator_hash: str,
-                        hash_stop: str,
+                        block_number: int,
+                        max_headers: int,
+                        reverse: int,
                         destination_address: str,
                         upload_rate=None):
         get_headers_msg = self.network_message.get_headers(
-            block_locator_hash, hash_stop)
+            block_number, max_headers, reverse)
         self.env.process(
             self.send(destination_address, upload_rate, get_headers_msg))

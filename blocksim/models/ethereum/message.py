@@ -41,7 +41,7 @@ class Message:
             'size': 10  # TODO: Measure the size message
         }
 
-    def get_block_headers(self, block_number: int, max_headers: int, reverse: int):
+    def get_headers(self, block_number: int, max_headers: int, reverse: int):
         return {
             'id': 3,
             'block_number': block_number,
@@ -51,9 +51,9 @@ class Message:
         }
 
     def block_headers(self, block_headers: list):
-        """ Reply to `get_block_headers` the items in the list are block headers.
+        """ Reply to `get_headers` the items in the list are block headers.
         This may contain no block headers if no block headers were able to be returned
-        for the `get_block_headers` message.
+        for the `get_headers` message.
         """
         return {
             'id': 4,

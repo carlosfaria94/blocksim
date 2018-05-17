@@ -7,7 +7,7 @@ class Message:
     def __init__(self, origin_node):
         self.origin_node = origin_node
 
-    def inv(self, hashes: list, type: str):
+    def inv(self, hashes, type: str):
         """Allows a node to advertise its knowledge of one or more transactions or blocks"""
         return {
             'id': 'inv',
@@ -40,11 +40,12 @@ class Message:
             'size': 10  # TODO: Measure the size message
         }
 
-    def get_headers(self, block_locator_hash: str, hash_stop: str):
+    def get_headers(self, block_number: int, max_headers: int, reverse: int):
         return {
             'id': 'getheaders',
-            'block_locator_hash': block_locator_hash,
-            'hash_stop': hash_stop,
+            'block_number': block_number,
+            'max_headers': max_headers,
+            'reverse': reverse,
             'size': 10  # TODO: Measure the size message
         }
 
