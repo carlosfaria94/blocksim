@@ -38,6 +38,7 @@ class ETHNode(Node):
             # TODO: The mining delays hard coded
             env.process(self.init_mining(2, 15))
         self.network_message = Message(self)
+        self.handshaking = env.event()
 
     def init_mining(self,
                     duration_to_validate_tx,
@@ -118,26 +119,34 @@ class ETHNode(Node):
             nonce)
         return Block(candidate_block_header, pending_txs)
 
-    def handshake(self, network: str, total_difficulty: int, best_hash: str, genesis_hash: str):
-        """Handshake executes the ETH protocol handshake, negotiating network, difficulties,
-        head and genesis blocks"""
-        # Get the difficulty from the head of the chain, known as Total Difficulty (TD)
-        my_total_difficulty = self.chain.head.header.difficulty
-        if my_total_difficulty < total_difficulty:
-            print('I am not sync, I need to sync with this node')
-        else:
-            print('I am sync with this node')
+    def connect(self, upload_rate, *nodes):
+        super().connect(upload_rate, *nodes)
+        for node in nodes:
+            self._handshake(node.address, upload_rate)
 
-    def get_node_status(self, node):
-        status = Message(node).status()
-        # TODO: Apply a deplay according to network communication between nodes
-        yield self.env.timeout(3)
-        return status
+    def _handshake(self, destination_address: str, upload_rate):
+        """Handshake inform a node of its current ethereum state, negotiating network, difficulties,
+        head and genesis blocks
+        This message should be sent after the initial handshake and prior to any ethereum related messages."""
+        status_msg = self.network_message.status()
+        print(f'{self.address} at {self.env.now}: Status message sent {status_msg} to {destination_address}')
+        self.env.process(
+            self.send(destination_address, upload_rate, status_msg))
+
+    def _receive_status(self, envelope):
+        print(
+            f'{self.address} at {self.env.now}: Receive status from {envelope.origin.address}')
+        node = self.active_sessions.get(envelope.origin.address)
+        node['status'] = envelope.msg
+        self.active_sessions[envelope.origin.address] = node
+        self.handshaking.succeed()
+        self.handshaking = self.env.event()
 
     def broadcast_transactions(self, transactions: list, upload_rate):
         """Broadcast transactions to all nodes with an active session and mark the hashes
         as known by each node"""
-        yield self.connecting  # Wait for all connections
+        yield self.connecting  # Wait for all connections        print('test')
+        yield self.handshaking  # Wait for handshaking to be completed
         for node_address, node in self.active_sessions.items():
             for tx in transactions:
                 # Checks if the transaction was previous sent
@@ -155,16 +164,11 @@ class ETHNode(Node):
             transactions_msg = self.network_message.transactions(transactions)
 
             # TODO: We need first know the status of the other node and then broadcast
-            connection = node.get('connection')
-            self.env.process(self.get_node_status(
-                connection.destination_node))
+            #connection = node.get('connection')
+            # self.env.process(self.get_node_status(
+            #    connection.destination_node))
 
             self.env.process(self.broadcast(upload_rate, transactions_msg))
-
-    def send_status(self, destination_address: str, upload_rate):
-        status_msg = self.network_message.status()
-        self.env.process(
-            self.send(destination_address, upload_rate, status_msg))
 
     def _read_envelope(self, envelope):
         super()._read_envelope(envelope)
@@ -182,9 +186,6 @@ class ETHNode(Node):
             self._send_block_bodies(envelope)
         if envelope.msg['id'] == 6:  # block_bodies
             self._receive_block_bodies(envelope)
-
-    def _receive_status(self, envelope):
-        pass
 
     def _receive_new_blocks(self, envelope):
         """Handle new blocks received.

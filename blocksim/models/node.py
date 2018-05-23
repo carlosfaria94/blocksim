@@ -48,7 +48,8 @@ class Node:
         self.connecting = None
 
     def connect(self, upload_rate, *nodes):
-        """Simulate an acknowledgement phase with given nodes"""
+        """Simulate an acknowledgement phase with given nodes.
+        During simulation the nodes will have an active session."""
         for node in nodes:
             connection = Connection(self.env, self, node)
             self.active_sessions[node.address] = {
@@ -102,8 +103,8 @@ class Node:
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
-            self._read_envelope(envelope)
             yield self.env.timeout(self.download_rate)
+            self._read_envelope(envelope)
 
     def send(self, destination_address: str, upload_rate, msg):
         node = self.active_sessions.get(destination_address)

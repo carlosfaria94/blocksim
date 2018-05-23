@@ -302,6 +302,12 @@ class BTCNode(Node):
                         reverse: int,
                         destination_address: str,
                         upload_rate=None):
+        """Request a node (identified by the `destination_address`) to return block headers.
+
+        Request must contain a number of block headers, of rising number when `reverse` is `0`,
+        falling when `1`, beginning at `block_number`.
+        At most `max_headers` items.
+        """
         get_headers_msg = self.network_message.get_headers(
             block_number, max_headers, reverse)
         self.env.process(
