@@ -1,17 +1,16 @@
-import random
-from blocksim.models.consensus import apply_block, validate_block, apply_transaction, validate_transaction
-from blocksim.exceptions import VerificationFailed, InvalidTransaction
-
-
 class Chain:
-    """ Defines the chain model."""
+    """Defines a base chain model that needs to be extended according to blockchain protocol
+    being simulated"""
 
-    def __init__(self, env, genesis, db):
+    def __init__(self, env, node, consensus, genesis, db):
         self.env = env
+        self.node = node
+        self.consensus = consensus
         self.db = db
         self.genesis = genesis
-        self.db.put('block:{}'.format(
-            genesis.header.number), genesis.header.hash)
+
+        # Init the chain with the Genesis block
+        self.db.put(f'block:{genesis.header.number}', genesis.header.hash)
         self.db.put(genesis.header.hash, genesis)
         self._head_hash = genesis.header.hash
         self.parent_queue = {}
@@ -78,19 +77,19 @@ class Chain:
 
     def add_block(self, block):
         """Call upon receiving a block"""
-        validate_block(self.env, 3)
+        self.consensus.validate_block(self.env, 3)
         # Is the block being added to the heap?
         if block.header.prevhash == self._head_hash:
             print(
-                f'at {self.env.now}: Adding block #{block.header.number} ({block.header.hash[:4]}) to the head', )
-            apply_block(self.env, 2)
+                f'{self.node.address} at {self.env.now}: Adding block #{block.header.number} ({block.header.hash[:8]}) to the head', )
+            self.consensus.apply_block(self.env, 2)
             self.db.put(f'block:{block.header.number}', block.header.hash)
             self._head_hash = block.header.hash
         # Or is the block being added to a chain that is not currently the head?
         elif block.header.prevhash in self.db:
             print(
-                f'Receiving block #{block.header.number} ({block.header.hash[:4]}) not on head ({self._head_hash[:4]}), adding to secondary post state {block.header.prevhash[:4]}')
-            apply_block(self.env, 2)
+                f'{self.node.address} at {self.env.now}: Receiving block #{block.header.number} ({block.header.hash[:8]}) not on head ({self._head_hash[:8]}), adding to secondary post state')
+            self.consensus.apply_block(self.env, 2)
             # TODO: If the block should be the new head, replace the head
             # if block_score > self.get_score(self.head):
             # pass
@@ -100,7 +99,7 @@ class Chain:
                 self.parent_queue[block.header.prevhash] = []
             self.parent_queue[block.header.prevhash].append(block)
             print(
-                f'Got block #{block.header.number} ({block.header.hash[:4]}) with prevhash {block.header.prevhash[:4]}, parent not found. Delaying for now')
+                f'{self.node.address} at {self.env.now}: Got block #{block.header.number} ({block.header.hash[:8]}) with prevhash {block.header.prevhash[:8]}, parent not found. Delaying for now')
             return False
 
         self.add_child(block)

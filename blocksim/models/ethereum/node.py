@@ -2,8 +2,8 @@ from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.ethereum.message import Message
-from blocksim.models.chain import Chain
-from blocksim.models.consensus import validate_transaction
+from blocksim.models.ethereum.chain import ETHChain
+from blocksim.models.ethereum.consensus import ETHConsensus
 from blocksim.models.db import BaseDB
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.ethereum.config import default_config
@@ -21,7 +21,8 @@ class ETHNode(Node):
                  is_mining=False):
         # Create the Ethereum genesis block and init the chain
         genesis = Block(BlockHeader())
-        chain = Chain(env, genesis, BaseDB())
+        self.consensus = ETHConsensus(env)
+        chain = ETHChain(env, self, self.consensus, genesis, BaseDB())
         super().__init__(env,
                          network,
                          transmission_speed,
@@ -65,7 +66,8 @@ class ETHNode(Node):
                 pending_txs.append(pending_tx)
                 txs_intrinsic_gas += pending_tx.startgas
                 # Simulate the transaction validation
-                validate_transaction(self.env, duration_to_validate_tx)
+                self.consensus.validate_transaction(
+                    self.env, duration_to_validate_tx)
 
             # Build the candidate block
             candidate_block = self._build_candidate_block(
@@ -73,14 +75,14 @@ class ETHNode(Node):
                 txs_intrinsic_gas,
                 pending_txs)
             print(
-                f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:16]}')
+                f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
 
             # Mine the block by simulating the resolution of a puzzle
             candidate_block = self._mine(candidate_block)
             yield self.env.timeout(duration_to_solve_puzzle)
 
             print(
-                f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:16]}')
+                f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
 
             # Add the candidate block to the chain of the miner node
             self.chain.add_block(candidate_block)
@@ -98,16 +100,15 @@ class ETHNode(Node):
         # Get the current head block
         prev_block = self.chain.head
 
-        # TODO
         tx_list_root = uncles_hash = state_root = receipts_root = default_config['BLANK_ROOT']
-        # TODO: Miner coinbase address
         coinbase = default_config['GENESIS_COINBASE']
-        # TODO: Mining difficulty
-        difficulty = default_config['GENESIS_DIFFICULTY']
+
+        timestamp = self.env.now
+        difficulty = self.consensus.calc_difficulty(prev_block, timestamp)
         nonce = ''
 
         block_number = prev_block.header.number + 1
-        timestamp = self.env.now
+
         candidate_block_header = BlockHeader(
             prev_block.header.hash,
             tx_list_root,
@@ -234,7 +235,7 @@ class ETHNode(Node):
         block_hashes = []
         block_bodies = envelope.msg.get('block_bodies')
         for block_hash, block_txs in block_bodies.items():
-            block_hashes.append(block_hash[:4])
+            block_hashes.append(block_hash[:8])
             if block_hash in self.temp_headers:
                 header = self.temp_headers.get(block_hash)
                 new_block = Block(header, block_txs)

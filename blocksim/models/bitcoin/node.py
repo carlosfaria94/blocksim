@@ -3,7 +3,7 @@ from blocksim.models.network import Network
 from blocksim.models.bitcoin.message import Message
 from blocksim.models.chain import Chain
 from blocksim.models.db import BaseDB
-from blocksim.models.consensus import validate_transaction
+from blocksim.models.consensus import Consensus
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
 from blocksim.models.bitcoin.config import default_config
@@ -21,7 +21,8 @@ class BTCNode(Node):
                  is_mining=False):
         # Create the Bitcoin genesis block and init the chain
         genesis = Block(BlockHeader())
-        chain = Chain(env, genesis, BaseDB())
+        self.consensus = Consensus(env)
+        chain = Chain(env, self, self.consensus, genesis, BaseDB())
         super().__init__(env,
                          network,
                          transmission_speed,
@@ -66,19 +67,20 @@ class BTCNode(Node):
                 pending_txs.append(pending_tx)
                 txs_size += pending_tx.size
                 # Simulate the transaction validation
-                validate_transaction(self.env, duration_to_validate_tx)
+                self.consensus.validate_transaction(
+                    self.env, duration_to_validate_tx)
 
             # Build the candidate block
             candidate_block = self._build_candidate_block(pending_txs)
             print(
-                f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:16]}')
+                f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
 
             # Mine the block by simulating the resolution of a puzzle
             candidate_block = self._mine(candidate_block)
             yield self.env.timeout(duration_to_solve_puzzle)
 
             print(
-                f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:16]}')
+                f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
 
             # Add the candidate block to the chain of the miner node
             self.chain.add_block(candidate_block)
@@ -158,7 +160,7 @@ class BTCNode(Node):
 
     def _receive_new_blocks(self, envelope):
         """Handle new blocks received.
-        The destination only receives the hash and number of the block. It is needed 
+        The destination only receives the hash and number of the block. It is needed
         to ask for the header and body."""
         new_blocks = envelope.msg.get('hashes')
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
