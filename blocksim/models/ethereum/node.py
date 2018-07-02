@@ -3,6 +3,7 @@ from blocksim.models.network import Network
 from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.ethereum.message import Message
 from blocksim.models.chain import Chain
+from blocksim.models.consensus import validate_transaction
 from blocksim.models.db import BaseDB
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.ethereum.config import default_config
@@ -20,7 +21,7 @@ class ETHNode(Node):
                  is_mining=False):
         # Create the Ethereum genesis block and init the chain
         genesis = Block(BlockHeader())
-        chain = Chain(genesis, BaseDB())
+        chain = Chain(env, genesis, BaseDB())
         super().__init__(env,
                          network,
                          transmission_speed,
@@ -36,14 +37,14 @@ class ETHNode(Node):
             # TODO: The transaction queue delay is hard coded
             self.transaction_queue = TransactionQueue(env, 2, self)
             # TODO: The mining delays hard coded
-            env.process(self.init_mining(2, 15))
+            env.process(self._init_mining(2, 15, 63000))
         self.network_message = Message(self)
         self.handshaking = env.event()
 
-    def init_mining(self,
-                    duration_to_validate_tx,
-                    duration_to_solve_puzzle,
-                    gas_limit_per_block=default_config['GENESIS_GAS_LIMIT']):
+    def _init_mining(self,
+                     duration_to_validate_tx,
+                     duration_to_solve_puzzle,
+                     gas_limit_per_block=default_config['GENESIS_GAS_LIMIT']):
         """Simulates the mining operation.
         (1) Gets transactions from the queue
         (2) Validates each transaction
@@ -51,6 +52,9 @@ class ETHNode(Node):
         (4) Solves a cryptographic puzzle
         (5) Broadcast the candidate block with the Proof of Work
         """
+        if self.is_mining is False:
+            raise RuntimeError(f'Node {self.location} is not a miner')
+
         print(
             f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
         while True:
@@ -61,7 +65,7 @@ class ETHNode(Node):
                 pending_txs.append(pending_tx)
                 txs_intrinsic_gas += pending_tx.startgas
                 # Simulate the transaction validation
-                yield self.env.timeout(duration_to_validate_tx)
+                validate_transaction(self.env, duration_to_validate_tx)
 
             # Build the candidate block
             candidate_block = self._build_candidate_block(
@@ -129,7 +133,8 @@ class ETHNode(Node):
         head and genesis blocks
         This message should be sent after the initial handshake and prior to any ethereum related messages."""
         status_msg = self.network_message.status()
-        print(f'{self.address} at {self.env.now}: Status message sent {status_msg} to {destination_address}')
+        print(
+            f'{self.address} at {self.env.now}: Status message sent to {destination_address}')
         self.env.process(
             self.send(destination_address, upload_rate, status_msg))
 
@@ -172,19 +177,19 @@ class ETHNode(Node):
 
     def _read_envelope(self, envelope):
         super()._read_envelope(envelope)
-        if envelope.msg['id'] == 0:  # status
+        if envelope.msg['id'] == 'status':
             self._receive_status(envelope)
-        if envelope.msg['id'] == 1:  # new_blocks
+        if envelope.msg['id'] == 'new_blocks':
             self._receive_new_blocks(envelope)
-        if envelope.msg['id'] == 2:  # transactions
+        if envelope.msg['id'] == 'transactions':
             self._receive_transactions(envelope)
-        if envelope.msg['id'] == 3:  # get_headers_msg
+        if envelope.msg['id'] == 'get_headers':
             self._send_block_headers(envelope)
-        if envelope.msg['id'] == 4:  # block_headers
+        if envelope.msg['id'] == 'block_headers':
             self._receive_block_headers(envelope)
-        if envelope.msg['id'] == 5:  # get_block_bodies
+        if envelope.msg['id'] == 'get_block_bodies':
             self._send_block_bodies(envelope)
-        if envelope.msg['id'] == 6:  # block_bodies
+        if envelope.msg['id'] == 'block_bodies':
             self._receive_block_bodies(envelope)
 
     def _receive_new_blocks(self, envelope):
@@ -212,6 +217,9 @@ class ETHNode(Node):
     def _receive_block_headers(self, envelope):
         """Handle block headers received"""
         block_headers = envelope.msg.get('block_headers')
+
+        # TODO: Do not ask for a block body that is already in his blockchain
+
         # Save the header in a temporary list
         hashes = []
         for header in block_headers:
@@ -223,14 +231,17 @@ class ETHNode(Node):
         """Handle block bodies received
         Assemble the block header in a temporary list with the block body received and
         insert it in the blockchain"""
+        block_hashes = []
         block_bodies = envelope.msg.get('block_bodies')
         for block_hash, block_txs in block_bodies.items():
+            block_hashes.append(block_hash[:4])
             if block_hash in self.temp_headers:
                 header = self.temp_headers.get(block_hash)
                 new_block = Block(header, block_txs)
                 self.chain.add_block(new_block)
                 del self.temp_headers[block_hash]
-        print(f'{self.address} at {self.env.now}: {len(block_bodies)} Block(s) assembled and added to the blockchain')
+        print(
+            f'{self.address} at {self.env.now}: {len(block_bodies)} Block(s) {block_hashes} assembled and added to the blockchain')
 
     def broadcast_new_blocks(self, new_blocks, upload_rate):
         """Specify one or more new blocks which have appeared on the network.

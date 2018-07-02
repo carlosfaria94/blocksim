@@ -1,12 +1,13 @@
 import random
-from blocksim.models.consensus import apply_block
+from blocksim.models.consensus import apply_block, validate_block, apply_transaction, validate_transaction
 from blocksim.exceptions import VerificationFailed, InvalidTransaction
 
 
 class Chain:
     """ Defines the chain model."""
 
-    def __init__(self, genesis, db):
+    def __init__(self, env, genesis, db):
+        self.env = env
         self.db = db
         self.genesis = genesis
         self.db.put('block:{}'.format(
@@ -77,40 +78,29 @@ class Chain:
 
     def add_block(self, block):
         """Call upon receiving a block"""
+        validate_block(self.env, 3)
         # Is the block being added to the heap?
         if block.header.prevhash == self._head_hash:
-            print(f'Adding block ({block.header.hash[:16]}) to the head', )
-            try:
-                # TODO: Send state
-                state = {}
-                apply_block(state, block)
-            except (AssertionError, KeyError, ValueError, InvalidTransaction, VerificationFailed) as e:
-                print('Block %d (%s) with parent %s invalid, reason: %s' % (
-                    block.header.number, block.header.hash[:4], block.header.prevhash[:4], str(e)))
-                return False
+            print(
+                f'at {self.env.now}: Adding block #{block.header.number} ({block.header.hash[:4]}) to the head', )
+            apply_block(self.env, 2)
             self.db.put(f'block:{block.header.number}', block.header.hash)
             self._head_hash = block.header.hash
         # Or is the block being added to a chain that is not currently the head?
         elif block.header.prevhash in self.db:
-            print('Receiving block %d (%s) not on head (%s), adding to secondary post state %s' % (
-                block.header.number, block.header.hash[:4], self._head_hash[:4], block.header.prevhash[:4]))
-            try:
-                temp_state = {}
-                apply_block(temp_state, block)
-            except (AssertionError, KeyError, ValueError, InvalidTransaction, VerificationFailed) as e:
-                print(
-                    f'Block {block.header.hash[:4]} with parent {block.header.prevhash[:4]} invalid, reason: {str(e)}')
-                return False
+            print(
+                f'Receiving block #{block.header.number} ({block.header.hash[:4]}) not on head ({self._head_hash[:4]}), adding to secondary post state {block.header.prevhash[:4]}')
+            apply_block(self.env, 2)
             # TODO: If the block should be the new head, replace the head
             # if block_score > self.get_score(self.head):
-                # pass
+            # pass
         # Block has no parent yet
         else:
             if block.header.prevhash not in self.parent_queue:
                 self.parent_queue[block.header.prevhash] = []
             self.parent_queue[block.header.prevhash].append(block)
-            print('Got block %d (%s) with prevhash %s, parent not found. Delaying for now' % (
-                block.header.number, block.header.hash[:4], block.header.prevhash[:4]))
+            print(
+                f'Got block #{block.header.number} ({block.header.hash[:4]}) with prevhash {block.header.prevhash[:4]}, parent not found. Delaying for now')
             return False
 
         self.add_child(block)

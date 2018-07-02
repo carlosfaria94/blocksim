@@ -1,32 +1,32 @@
 """ Defines the consensus model.
 
-The goal of this model is to define the rules that a node needs to follow to reach consensus
+The goal of this model is to simulate the rules that a node needs to follow to reach consensus
 between his peers.
 
-The information needed to process a transaction or a block is located within the state
-itself, allowing the actual state transition logic to be a very clean `apply_transaction(state, tx)`
-and `apply_block(state, block)`.
+In order to simplify, we only take into account the duration of block and transaction validation,
+given by the user as simulation input.
 """
 
-null_address = b'\xff' * 20
+
+def apply_block(env, duration, state=None, block=None):
+    """ Simulates the block-level state transition function.
+    For now, it only applies a delay in simulation, corresponding to previous measurements"""
+    yield env.timeout(duration)
 
 
-def apply_block(state, block):
-    """Applies the block-level state transition function"""
-    pass
+def validate_block(env, duration, state=None, block=None):
+    """ Simulates the block validation.
+    For now, it only applies a delay in simulation, corresponding to previous measurements"""
+    yield env.timeout(duration)
 
 
-def apply_transaction(state, tx):
-    """Applies the state transition function"""
-    pass
+def apply_transaction(env, duration, state=None, tx=None):
+    """ Simulates the transaction-level state transition function.
+    For now, it only applies a delay in simulation, corresponding to previous measurements"""
+    yield env.timeout(duration)
 
 
-def validate_transaction(env, duration, state, tx):
-    """Validates the transaction.
-    (1) the transaction is well-formed
-    (2) the transaction signature is valid
-    (3) the transaction nonce is valid (equivalent to the sender account’s current nonce)
-    (4) the gas limit is no smaller than the intrinsic gas (21000), used by the transaction
-    (5) the sender account balance contains at least the cost, required in up-front payment.
-    """
+def validate_transaction(env, duration, state=None, tx=None):
+    """ Simulates the transaction validation.
+    For now, it only applies a delay in simulation, corresponding to previous measurements"""
     yield env.timeout(duration)

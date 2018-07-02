@@ -5,7 +5,7 @@ from blocksim.models.ethereum.node import ETHNode
 from blocksim.models.ethereum.transaction import ETHTransaction
 from blocksim.models.ethereum.block import Block, BlockHeader
 
-SIM_DURATION = 1000
+SIM_DURATION = 10000
 ENV = simpy.Environment()
 
 
@@ -28,22 +28,22 @@ def run_simulation(env):
     network = Network(env, 'NetworkXPTO')
 
     node_lisbon = ETHNode(env, network, 1, 2, 3,
-                          'Lisbon', 'lisbon-address', True)
-    node_lisbon2 = ETHNode(env, network, 1, 2, 3,
-                           'Lisbon', 'lisbon2-address', True)
-    node_berlin = ETHNode(env, network, 1, 2, 3, 'Berlin', 'berlin-address')
+                          'Lisbon', 'lisbon', True)
+    node_barcelona = ETHNode(env, network, 1, 2, 3,
+                             'Barcelona', 'barcelona', True)
+    node_berlin = ETHNode(env, network, 1, 2, 3, 'Berlin', 'berlin')
 
     node_berlin.connect(5, node_lisbon)
-    node_berlin.connect(2, node_lisbon2)
-    node_lisbon2.connect(3, node_berlin)
+    node_berlin.connect(2, node_barcelona)
+    node_barcelona.connect(3, node_berlin)
     node_lisbon.connect(6, node_berlin)
 
     first_tx = ETHTransaction(
-        'lisbon-address', 'berlin-address', 140, 'sig1', 1, 50, 100)
+        'lisbon-address', 'berlin-address', 140, 'sig1', 1, 50)
     second_tx = ETHTransaction(
-        'lisbon-address', 'berlin-address', 20, 'sig2', 2, 40, 10)
+        'lisbon-address', 'berlin-address', 20, 'sig2', 2, 40)
     third_tx = ETHTransaction(
-        'lisbon-address', 'berlin-address', 1000, 'sig3', 3, 50, 50)
+        'lisbon-address', 'berlin-address', 1000, 'sig3', 3, 50)
     transactions = [first_tx, second_tx, third_tx]
 
     env.process(node_berlin.broadcast_transactions(transactions, 2))

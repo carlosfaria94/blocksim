@@ -135,8 +135,8 @@ class Node:
             connection = node.get('connection')
 
             if connection is None:
-                raise RuntimeError('Not possible to create a direct connection with the node {}'
-                                   .format(node_address))
+                raise RuntimeError(
+                    f'Not possible to create a direct connection with the node {node_address}')
 
             # TODO: Calculate a delay/timeout do simulate the TCP handshake ??
             yield self.env.timeout(3)

@@ -14,7 +14,7 @@ class Message:
         This message should be sent `after` the initial handshake and `prior` to any ethereum related messages.
         """
         return {
-            'id': 0,
+            'id': 'status',
             'protocol_version': 'PV62',
             'network': self.origin_node.network.name,
             'td': self.origin_node.chain.head.header.difficulty,
@@ -25,7 +25,7 @@ class Message:
 
     def new_blocks(self, new_blocks: dict):
         return {
-            'id': 1,
+            'id': 'new_blocks',
             'new_blocks': new_blocks,
             'size': 10  # TODO: Measure the size message
         }
@@ -36,14 +36,14 @@ class Message:
         This packet must contain at least one (new) transaction.
         """
         return {
-            'id': 2,
+            'id': 'transactions',
             'transactions': transactions,
             'size': 10  # TODO: Measure the size message
         }
 
     def get_headers(self, block_number: int, max_headers: int, reverse: int):
         return {
-            'id': 3,
+            'id': 'get_headers',
             'block_number': block_number,
             'max_headers': max_headers,
             'reverse': reverse,
@@ -56,14 +56,14 @@ class Message:
         for the `get_headers` message.
         """
         return {
-            'id': 4,
+            'id': 'block_headers',
             'block_headers': block_headers,
             'size': 10  # TODO: Measure the size message
         }
 
     def get_block_bodies(self, hashes: list):
         return {
-            'id': 5,
+            'id': 'get_block_bodies',
             'hashes': hashes,
             'size': 10  # TODO: Measure the size message
         }
@@ -73,7 +73,7 @@ class Message:
         This may contain no items if no blocks were able to be returned for the `get_block_bodies` message.
         """
         return {
-            'id': 6,
+            'id': 'block_bodies',
             'block_bodies': block_bodies,
             'size': 10  # TODO: Measure the size message
         }

@@ -3,6 +3,7 @@ from blocksim.models.network import Network
 from blocksim.models.bitcoin.message import Message
 from blocksim.models.chain import Chain
 from blocksim.models.db import BaseDB
+from blocksim.models.consensus import validate_transaction
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
 from blocksim.models.bitcoin.config import default_config
@@ -20,7 +21,7 @@ class BTCNode(Node):
                  is_mining=False):
         # Create the Bitcoin genesis block and init the chain
         genesis = Block(BlockHeader())
-        chain = Chain(genesis, BaseDB())
+        chain = Chain(env, genesis, BaseDB())
         super().__init__(env,
                          network,
                          transmission_speed,
@@ -38,13 +39,13 @@ class BTCNode(Node):
             # TODO: The transaction queue delay is hard coded
             self.transaction_queue = TransactionQueue(env, 2, self)
             # TODO: The mining delays hard coded
-            env.process(self.init_mining(2, 15, 3))
+            env.process(self._init_mining(2, 15, 3))
         self.network_message = Message(self)
 
-    def init_mining(self,
-                    duration_to_validate_tx,
-                    duration_to_solve_puzzle,
-                    block_size=default_config['BLOCK_SIZE']):
+    def _init_mining(self,
+                     duration_to_validate_tx,
+                     duration_to_solve_puzzle,
+                     block_size=default_config['BLOCK_SIZE']):
         """Simulates the mining operation.
         (1) Gets transactions from the queue
         (2) Validates each transaction (using the consensus model)
@@ -52,6 +53,9 @@ class BTCNode(Node):
         (4) Solves a cryptographic puzzle
         (5) Broadcast the candidate block with the Proof of Work (nonce)
         """
+        if self.is_mining is False:
+            raise RuntimeError(f'Node {self.location} is not a miner')
+
         print(
             f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
         while True:
@@ -62,7 +66,7 @@ class BTCNode(Node):
                 pending_txs.append(pending_tx)
                 txs_size += pending_tx.size
                 # Simulate the transaction validation
-                yield self.env.timeout(duration_to_validate_tx)
+                validate_transaction(self.env, duration_to_validate_tx)
 
             # Build the candidate block
             candidate_block = self._build_candidate_block(pending_txs)
