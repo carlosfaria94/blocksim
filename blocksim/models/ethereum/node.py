@@ -1,3 +1,5 @@
+import random
+import simpy
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.ethereum.block import Block, BlockHeader
@@ -33,70 +35,79 @@ class ETHNode(Node):
                          chain)
         self.is_mining = is_mining
         self.temp_headers = {}
+        self.network_message = Message(self)
         if is_mining:
             # Transaction Queue to store the transactions
-            # TODO: The transaction queue delay is hard coded
-            self.transaction_queue = TransactionQueue(env, 2, self)
-            # TODO: The mining delays hard coded
-            env.process(self._init_mining(2, 15, 63000))
-        self.network_message = Message(self)
+            self.transaction_queue = TransactionQueue(env, self)
+            self.mining_current_block = None
+            env.process(self._init_mining())
         self.handshaking = env.event()
 
-    def _init_mining(self,
-                     duration_to_validate_tx,
-                     duration_to_solve_puzzle,
-                     gas_limit_per_block=default_config['GENESIS_GAS_LIMIT']):
+    def _init_mining(self):
         """Simulates the mining operation.
         (1) Gets transactions from the queue
-        (2) Validates each transaction
-        (3) Constructs a candidate block with intrinsic valid transactions
-        (4) Solves a cryptographic puzzle
-        (5) Broadcast the candidate block with the Proof of Work
+        (2) Constructs a candidate block with intrinsic valid transactions
+        (3) Solves a cryptographic puzzle
+        (4) Broadcast the candidate block with the Proof of Work
+        (5) Adds the block to the chain
         """
         if self.is_mining is False:
             raise RuntimeError(f'Node {self.location} is not a miner')
 
         print(
             f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
-        while True:
-            txs_intrinsic_gas = 0
-            pending_txs = []
-            while txs_intrinsic_gas < gas_limit_per_block:
-                pending_tx = yield self.transaction_queue.get()
-                pending_txs.append(pending_tx)
-                txs_intrinsic_gas += pending_tx.startgas
-                # Simulate the transaction validation
-                self.consensus.validate_transaction(
-                    self.env, duration_to_validate_tx)
 
-            # Build the candidate block
-            candidate_block = self._build_candidate_block(
-                gas_limit_per_block,
-                txs_intrinsic_gas,
-                pending_txs)
-            print(
-                f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
+        gas_limit_per_block = 63000 or default_config['GENESIS_GAS_LIMIT']
+        txs_intrinsic_gas = 0
+        pending_txs = []
 
-            # Mine the block by simulating the resolution of a puzzle
-            candidate_block = self._mine(candidate_block)
-            yield self.env.timeout(duration_to_solve_puzzle)
+        while txs_intrinsic_gas < gas_limit_per_block:
+            pending_tx = yield self.transaction_queue.get()
+            pending_txs.append(pending_tx)
+            txs_intrinsic_gas += pending_tx.startgas
 
-            print(
-                f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
+        # Build the candidate block
+        candidate_block = self._build_candidate_block(
+            pending_txs, gas_limit_per_block, txs_intrinsic_gas)
+        print(
+            f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
 
-            # Add the candidate block to the chain of the miner node
-            self.chain.add_block(candidate_block)
-
-            # We need to broadcast the new candidate block across the network
-            self.broadcast_new_blocks([candidate_block], None)
+        # Mine the block by simulating the resolution of a puzzle
+        self.mining_current_block = self.env.process(
+            self._mine(candidate_block))
 
     def _mine(self, candidate_block):
-        """Simulates the mining operation. Only change the nonce to 'MINED'
-        In a simulation it is not needed to determine the nonce"""
-        candidate_block.header.nonce = 'MINED'
-        return candidate_block
+        """Simulates the mining operation.
+        Change the nonce to 'MINED' to mark block as mined.
+        In a simulation it is not needed to compute the real nonce"""
+        try:
+            while True:
+                candidate_block.header.nonce = 'MINED'
+                # A mining process will be delayed according to a normal distribution previously measured
+                yield self.env.timeout(self.env.delays['time_between_blocks'])
+                # But, finding the solution to the cryptographic puzzle can be random as flipping a coin
+                solved_puzzle = bool(random.getrandbits(1))
+                if solved_puzzle is True:
+                    print(
+                        f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
 
-    def _build_candidate_block(self, gas_limit_per_block, txs_intrinsic_gas, pending_txs):
+                    # We need to broadcast the new candidate block across the network
+                    self.broadcast_new_blocks([candidate_block], None)
+
+                    # Add the candidate block to the chain of the miner node
+                    self.chain.add_block(candidate_block)
+                    break
+                else:
+                    print(
+                        f'{self.address} at {self.env.now}: Cannot solve cryptographic puzzle for the candidate block. Try again.')
+        except simpy.Interrupt as i:
+            # The mining of the current block has interrupted
+            # Probably a new block has founded, forget this block, and start mining a new one.
+            print(
+                f'{self.address} at {self.env.now}: Stop mining current candidate block and start mining a new one')
+            self._init_mining()
+
+    def _build_candidate_block(self, pending_txs, gas_limit_per_block, txs_intrinsic_gas):
         # Get the current head block
         prev_block = self.chain.head
 
@@ -196,7 +207,10 @@ class ETHNode(Node):
     def _receive_new_blocks(self, envelope):
         """Handle new blocks received.
         The destination only receives the hash and number of the block. It is needed to
-        ask for the header and body."""
+        ask for the header and body.
+        If node is a miner, we need to interrupt the current candidate block mining process"""
+        if self.is_mining and self.mining_current_block.is_alive:
+            self.mining_current_block.interrupt()
         new_blocks = envelope.msg['new_blocks']
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
         lowest_block_number = min(

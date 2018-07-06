@@ -22,8 +22,19 @@ def create_random_blocks(how_many):
     return blocks
 
 
+def set_delays(env):
+    env.delays = {}
+    env.delays['validate_tx'] = 2
+    env.delays['time_between_blocks'] = 10
+    print(env.delays)
+    return env
+
+
 def run_simulation(env):
     """ Setup and start the simulation """
+
+    env = set_delays(env)
+
     # Create the network
     network = Network(env, 'NetworkXPTO')
 
@@ -33,10 +44,9 @@ def run_simulation(env):
                              'Barcelona', 'barcelona', True)
     node_berlin = ETHNode(env, network, 1, 2, 3, 'Berlin', 'berlin')
 
-    node_berlin.connect(5, node_lisbon)
-    node_berlin.connect(2, node_barcelona)
-    node_barcelona.connect(3, node_berlin)
-    node_lisbon.connect(6, node_berlin)
+    node_berlin.connect(5, node_lisbon, node_barcelona)
+    node_barcelona.connect(3, node_berlin, node_lisbon)
+    node_lisbon.connect(6, node_berlin, node_barcelona)
 
     first_tx = ETHTransaction(
         'lisbon-address', 'berlin-address', 140, 'sig1', 1, 50)

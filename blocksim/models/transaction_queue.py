@@ -2,14 +2,13 @@ import simpy
 
 
 class TransactionQueue():
-    def __init__(self, env, delay, node):
+    def __init__(self, env, node):
         self.env = env
-        self.delay = delay
         self.node = node
         self.store = simpy.PriorityStore(env)
 
-    def latency(self, tx):
-        yield self.env.timeout(self.delay)
+    def validate_tx(self, tx):
+        yield self.env.timeout(self.env.delays['validate_tx'])
         self.store.put(tx)
         print('{} at {}: Transaction {} added to the queue'
               .format(
@@ -19,7 +18,7 @@ class TransactionQueue():
               ))
 
     def put(self, tx):
-        self.env.process(self.latency(tx))
+        self.env.process(self.validate_tx(tx))
 
     def get(self):
         return self.store.get()
