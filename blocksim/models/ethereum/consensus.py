@@ -17,9 +17,9 @@ class ETHConsensus(Consensus):
         self.config = default_config
 
     def calc_difficulty(self, parent, timestamp):
-        """Difficulty adjustment algorithm"""
+        """Difficulty adjustment algorithm for the simulator.
+        A block that is created in less time, have more difficulty associated"""
         offset = parent.header.difficulty // self.config['BLOCK_DIFF_FACTOR']
-        sign = 1 if timestamp - \
-            parent.header.timestamp < self.config['DIFF_ADJUSTMENT_CUTOFF'] else -1
-        return int(max(parent.header.difficulty + offset * sign,
-                       min(parent.header.difficulty, self.config['MIN_DIFF'])))
+        timestamp_diff = timestamp - parent.header.timestamp
+        new_diff = int(parent.header.difficulty + offset - timestamp_diff)
+        return new_diff

@@ -1,5 +1,5 @@
-import random
 import simpy
+import random
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.ethereum.block import Block, BlockHeader
@@ -110,16 +110,12 @@ class ETHNode(Node):
     def _build_candidate_block(self, pending_txs, gas_limit_per_block, txs_intrinsic_gas):
         # Get the current head block
         prev_block = self.chain.head
-
         tx_list_root = uncles_hash = state_root = receipts_root = default_config['BLANK_ROOT']
         coinbase = default_config['GENESIS_COINBASE']
-
         timestamp = self.env.now
         difficulty = self.consensus.calc_difficulty(prev_block, timestamp)
         nonce = ''
-
         block_number = prev_block.header.number + 1
-
         candidate_block_header = BlockHeader(
             prev_block.header.hash,
             tx_list_root,
@@ -162,7 +158,7 @@ class ETHNode(Node):
     def broadcast_transactions(self, transactions: list, upload_rate):
         """Broadcast transactions to all nodes with an active session and mark the hashes
         as known by each node"""
-        yield self.connecting  # Wait for all connections        print('test')
+        yield self.connecting  # Wait for all connections
         yield self.handshaking  # Wait for handshaking to be completed
         for node_address, node in self.active_sessions.items():
             for tx in transactions:
@@ -213,8 +209,12 @@ class ETHNode(Node):
             self.mining_current_block.interrupt()
         new_blocks = envelope.msg['new_blocks']
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
-        lowest_block_number = min(
-            block_number for _, block_number in new_blocks.items())
+        # If the block is already known by a node, it does not need to request the block again
+        block_numbers = []
+        for block_hash, block_number in new_blocks.items():
+            if self.chain.get_block(block_hash) is None:
+                block_numbers.append(block_number)
+        lowest_block_number = min(block_numbers)
         self.request_headers(
             lowest_block_number, len(new_blocks), 0, envelope.origin.address)
 
@@ -232,9 +232,6 @@ class ETHNode(Node):
     def _receive_block_headers(self, envelope):
         """Handle block headers received"""
         block_headers = envelope.msg.get('block_headers')
-
-        # TODO: Do not ask for a block body that is already in his blockchain
-
         # Save the header in a temporary list
         hashes = []
         for header in block_headers:
@@ -253,10 +250,17 @@ class ETHNode(Node):
             if block_hash in self.temp_headers:
                 header = self.temp_headers.get(block_hash)
                 new_block = Block(header, block_txs)
-                self.chain.add_block(new_block)
-                del self.temp_headers[block_hash]
+                if self.chain.add_block(new_block):
+                    del self.temp_headers[block_hash]
+                    print(
+                        f'{self.address} at {self.env.now}: Block {new_block.header.hash[:8]} assembled and added to the blockchain')
+        head = self.chain.head
         print(
-            f'{self.address} at {self.env.now}: {len(block_bodies)} Block(s) {block_hashes} assembled and added to the blockchain')
+            f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
+        for i in range(head.header.number):
+            b = self.chain.get_block_by_number(i)
+            print(
+                f'{self.address} at {self.env.now}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
 
     def broadcast_new_blocks(self, new_blocks, upload_rate):
         """Specify one or more new blocks which have appeared on the network.

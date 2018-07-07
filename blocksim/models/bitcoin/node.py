@@ -1,3 +1,5 @@
+import random
+import simpy
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.bitcoin.message import Message
@@ -39,6 +41,7 @@ class BTCNode(Node):
         if is_mining:
             # Transaction Queue to store the transactions
             self.transaction_queue = TransactionQueue(env, self)
+            self.mining_current_block = None
             env.process(self._init_mining())
 
     def _init_mining(self):
@@ -54,50 +57,63 @@ class BTCNode(Node):
 
         print(
             f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
-        while True:
-            block_size = default_config['BLOCK_SIZE']
-            txs_size = 0
-            pending_txs = []
-            while txs_size < block_size:
-                pending_tx = yield self.transaction_queue.get()
-                pending_txs.append(pending_tx)
-                txs_size += pending_tx.size
 
-            # Build the candidate block
-            candidate_block = self._build_candidate_block(pending_txs)
-            print(
-                f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
+        block_size = default_config['BLOCK_SIZE']
+        txs_size = 0
+        pending_txs = []
+        while txs_size < block_size:
+            pending_tx = yield self.transaction_queue.get()
+            pending_txs.append(pending_tx)
+            txs_size += pending_tx.size
 
-            # Mine the block by simulating the resolution of a puzzle
-            candidate_block = self._mine(candidate_block)
-            yield self.env.timeout(self.env.delays['time_between_blocks'])
+        # Build the candidate block
+        candidate_block = self._build_candidate_block(pending_txs)
+        print(
+            f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
 
-            print(
-                f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
-
-            # We need to broadcast the new candidate block across the network
-            self.broadcast_new_blocks([candidate_block], None)
-
-            # Add the candidate block to the chain of the miner node
-            self.chain.add_block(candidate_block)
+        # Mine the block by simulating the resolution of a puzzle
+        self.mining_current_block = self.env.process(
+            self._mine(candidate_block))
 
     def _mine(self, candidate_block):
-        """Simulates the mining operation. Only change the nonce to 'MINED'
-        In a simulation it is not needed to determine the nonce"""
-        candidate_block.header.nonce = 'MINED'
-        return candidate_block
+        """Simulates the mining operation.
+        Change the nonce to 'MINED' to mark block as mined.
+        In a simulation it is not needed to compute the real nonce"""
+        try:
+            while True:
+                candidate_block.header.nonce = 'MINED'
+                # A mining process will be delayed according to a normal distribution previously measured
+                yield self.env.timeout(self.env.delays['time_between_blocks'])
+                # But, finding the solution to the cryptographic puzzle can be random as flipping a coin
+                solved_puzzle = bool(random.getrandbits(1))
+                if solved_puzzle is True:
+                    print(
+                        f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
+
+                    # We need to broadcast the new candidate block across the network
+                    self.broadcast_new_blocks([candidate_block], None)
+
+                    # Add the candidate block to the chain of the miner node
+                    self.chain.add_block(candidate_block)
+                    break
+                else:
+                    print(
+                        f'{self.address} at {self.env.now}: Cannot solve cryptographic puzzle for the candidate block. Try again.')
+        except simpy.Interrupt as i:
+            # The mining of the current block has interrupted
+            # Probably a new block has founded, forget this block, and start mining a new one.
+            print(
+                f'{self.address} at {self.env.now}: Stop mining current candidate block and start mining a new one')
+            self._init_mining()
 
     def _build_candidate_block(self, pending_txs):
         # Get the current head block
         prev_block = self.chain.head
-
         tx_list_root = default_config['BLANK_ROOT']
-        # TODO: Mining difficulty
-        difficulty = default_config['GENESIS_DIFFICULTY']
-        nonce = ''
-
-        block_number = prev_block.header.number + 1
         timestamp = self.env.now
+        difficulty = self.consensus.calc_difficulty(prev_block, timestamp)
+        nonce = ''
+        block_number = prev_block.header.number + 1
         candidate_block_header = BlockHeader(
             prev_block.header.hash,
             tx_list_root,
@@ -155,10 +171,16 @@ class BTCNode(Node):
         """Handle new blocks received.
         The destination only receives the hash and number of the block. It is needed
         to ask for the header and body."""
+        if self.is_mining and self.mining_current_block.is_alive:
+            self.mining_current_block.interrupt()
         new_blocks = envelope.msg.get('hashes')
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
-        lowest_block_number = min(
-            block_number for _, block_number in new_blocks.items())
+        # If the block is already known by a node, it does not need to request the block again
+        block_numbers = []
+        for block_hash, block_number in new_blocks.items():
+            if self.chain.get_block(block_hash) is None:
+                block_numbers.append(block_number)
+        lowest_block_number = min(block_numbers)
         self.request_headers(
             lowest_block_number, len(new_blocks), 0, envelope.origin.address)
 
@@ -205,10 +227,10 @@ class BTCNode(Node):
         if block.header.hash in self.temp_headers:
             header = self.temp_headers.get(block.header.hash)
             new_block = Block(header, block.transactions)
-            self.chain.add_block(new_block)
-            del self.temp_headers[block.header.hash]
-            print(
-                f'{self.address} at {self.env.now}: Block {new_block.header.hash[:8]} assembled and added to the blockchain')
+            if self.chain.add_block(new_block):
+                del self.temp_headers[block.header.hash]
+                print(
+                    f'{self.address} at {self.env.now}: Block {new_block.header.hash[:8]} assembled and added to the blockchain')
 
     def _send_transactions(self, envelope):
         """Send a full transaction for any node that request it, identified by the
@@ -262,7 +284,6 @@ class BTCNode(Node):
         # Save the header in a temporary list
         hashes = []
         for header in block_headers:
-            # TODO: Validate the header, if not valid, do not request it
             self.temp_headers[header.hash] = header
             hashes.append(header.hash)
         self.request_bodies(hashes, envelope.origin.address)
