@@ -1,11 +1,11 @@
-import simpy
 import random
+import simpy
 from blocksim.models.node import Node
 from blocksim.models.network import Network
 from blocksim.models.ethereum.block import Block, BlockHeader
 from blocksim.models.ethereum.message import Message
-from blocksim.models.ethereum.chain import ETHChain
-from blocksim.models.ethereum.consensus import ETHConsensus
+from blocksim.models.chain import Chain
+from blocksim.models.consensus import Consensus
 from blocksim.models.db import BaseDB
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.ethereum.config import default_config
@@ -23,8 +23,8 @@ class ETHNode(Node):
                  is_mining=False):
         # Create the Ethereum genesis block and init the chain
         genesis = Block(BlockHeader())
-        self.consensus = ETHConsensus(env)
-        chain = ETHChain(env, self, self.consensus, genesis, BaseDB())
+        self.consensus = Consensus(env)
+        chain = Chain(env, self, self.consensus, genesis, BaseDB())
         super().__init__(env,
                          network,
                          transmission_speed,
@@ -34,6 +34,7 @@ class ETHNode(Node):
                          address,
                          chain)
         self.is_mining = is_mining
+        self.config = default_config
         self.temp_headers = {}
         self.network_message = Message(self)
         if is_mining:
@@ -57,7 +58,7 @@ class ETHNode(Node):
         print(
             f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
 
-        gas_limit_per_block = 63000 or default_config['GENESIS_GAS_LIMIT']
+        gas_limit_per_block = 63000 or self.config['GENESIS_GAS_LIMIT']
         txs_intrinsic_gas = 0
         pending_txs = []
 
@@ -84,7 +85,7 @@ class ETHNode(Node):
             while True:
                 candidate_block.header.nonce = 'MINED'
                 # A mining process will be delayed according to a normal distribution previously measured
-                yield self.env.timeout(self.env.delays['time_between_blocks'])
+                yield self.env.timeout(self.env.delays['TIME_BETWEEN_BLOCKS'])
                 # But, finding the solution to the cryptographic puzzle can be random as flipping a coin
                 solved_puzzle = bool(random.getrandbits(1))
                 if solved_puzzle is True:
@@ -110,25 +111,18 @@ class ETHNode(Node):
     def _build_candidate_block(self, pending_txs, gas_limit_per_block, txs_intrinsic_gas):
         # Get the current head block
         prev_block = self.chain.head
-        tx_list_root = uncles_hash = state_root = receipts_root = default_config['BLANK_ROOT']
-        coinbase = default_config['GENESIS_COINBASE']
+        coinbase = self.address
         timestamp = self.env.now
         difficulty = self.consensus.calc_difficulty(prev_block, timestamp)
-        nonce = ''
         block_number = prev_block.header.number + 1
         candidate_block_header = BlockHeader(
             prev_block.header.hash,
-            tx_list_root,
             block_number,
             timestamp,
-            uncles_hash,
-            state_root,
-            receipts_root,
             coinbase,
             difficulty,
             gas_limit_per_block,
-            txs_intrinsic_gas,
-            nonce)
+            txs_intrinsic_gas)
         return Block(candidate_block_header, pending_txs)
 
     def connect(self, upload_rate, *nodes):

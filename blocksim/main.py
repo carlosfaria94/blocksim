@@ -23,9 +23,10 @@ def create_random_blocks(how_many):
 
 
 def set_delays(env):
-    env.delays = {}
-    env.delays['validate_tx'] = 2
-    env.delays['time_between_blocks'] = 100
+    env.delays = dict(
+        VALIDATE_TX=2,
+        TIME_BETWEEN_BLOCKS=100
+    )
     print(env.delays)
     return env
 

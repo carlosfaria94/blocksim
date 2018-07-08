@@ -1,3 +1,6 @@
+from blocksim.models.ethereum.config import default_config
+
+
 class Consensus:
     """ Defines the consensus model.
 
@@ -10,6 +13,15 @@ class Consensus:
 
     def __init__(self, env):
         self.env = env
+        self.config = default_config
+
+    def calc_difficulty(self, parent, timestamp):
+        """Difficulty adjustment algorithm for the simulator.
+        A block that is created in less time, have more difficulty associated"""
+        offset = parent.header.difficulty // self.config['BLOCK_DIFF_FACTOR']
+        timestamp_diff = timestamp - parent.header.timestamp
+        new_diff = int(parent.header.difficulty + offset - timestamp_diff)
+        return new_diff
 
     def apply_block(self, duration, state=None, block=None):
         """ Simulates the block-level state transition function.

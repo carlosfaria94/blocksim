@@ -8,7 +8,7 @@ class TransactionQueue():
         self.store = simpy.PriorityStore(env)
 
     def validate_tx(self, tx):
-        yield self.env.timeout(self.env.delays['validate_tx'])
+        yield self.env.timeout(self.env.delays['VALIDATE_TX'])
         self.store.put(tx)
         print('{} at {}: Transaction {} added to the queue'
               .format(

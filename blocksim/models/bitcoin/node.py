@@ -8,7 +8,7 @@ from blocksim.models.db import BaseDB
 from blocksim.models.consensus import Consensus
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
-from blocksim.models.bitcoin.config import default_config
+from blocksim.models.config import default_config
 
 
 class BTCNode(Node):
@@ -34,6 +34,7 @@ class BTCNode(Node):
                          address,
                          chain)
         self.is_mining = is_mining
+        self.config = default_config
         self.temp_headers = {}
         self.temp_txs = {}
         self.tx_on_transit = {}
@@ -58,7 +59,7 @@ class BTCNode(Node):
         print(
             f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
 
-        block_size = default_config['BLOCK_SIZE']
+        block_size = self.config['BLOCK_SIZE_LIMIT']
         txs_size = 0
         pending_txs = []
         while txs_size < block_size:
@@ -83,7 +84,7 @@ class BTCNode(Node):
             while True:
                 candidate_block.header.nonce = 'MINED'
                 # A mining process will be delayed according to a normal distribution previously measured
-                yield self.env.timeout(self.env.delays['time_between_blocks'])
+                yield self.env.timeout(self.env.delays['TIME_BETWEEN_BLOCKS'])
                 # But, finding the solution to the cryptographic puzzle can be random as flipping a coin
                 solved_puzzle = bool(random.getrandbits(1))
                 if solved_puzzle is True:
@@ -109,18 +110,16 @@ class BTCNode(Node):
     def _build_candidate_block(self, pending_txs):
         # Get the current head block
         prev_block = self.chain.head
-        tx_list_root = default_config['BLANK_ROOT']
+        coinbase = self.address
         timestamp = self.env.now
         difficulty = self.consensus.calc_difficulty(prev_block, timestamp)
-        nonce = ''
         block_number = prev_block.header.number + 1
         candidate_block_header = BlockHeader(
             prev_block.header.hash,
-            tx_list_root,
             block_number,
             timestamp,
-            difficulty,
-            nonce)
+            coinbase,
+            difficulty)
         return Block(candidate_block_header, pending_txs)
 
     def _read_envelope(self, envelope):
