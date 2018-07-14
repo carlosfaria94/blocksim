@@ -199,8 +199,9 @@ class ETHNode(Node):
         The destination only receives the hash and number of the block. It is needed to
         ask for the header and body.
         If node is a miner, we need to interrupt the current candidate block mining process"""
-        if self.is_mining and self.mining_current_block.is_alive:
-            self.mining_current_block.interrupt()
+        if self.is_mining:
+            if self.mining_current_block and self.mining_current_block.is_alive:
+                self.mining_current_block.interrupt()
         new_blocks = envelope.msg['new_blocks']
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
         # If the block is already known by a node, it does not need to request the block again
@@ -247,7 +248,8 @@ class ETHNode(Node):
                 if self.chain.add_block(new_block):
                     del self.temp_headers[block_hash]
                     print(
-                        f'{self.address} at {self.env.now}: Block {new_block.header.hash[:8]} assembled and added to the blockchain')
+                        f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain  {new_block.header}')
+        # TODO: Delete next lines
         head = self.chain.head
         print(
             f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')

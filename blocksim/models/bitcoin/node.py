@@ -170,8 +170,9 @@ class BTCNode(Node):
         """Handle new blocks received.
         The destination only receives the hash and number of the block. It is needed
         to ask for the header and body."""
-        if self.is_mining and self.mining_current_block.is_alive:
-            self.mining_current_block.interrupt()
+        if self.is_mining:
+            if self.mining_current_block and self.mining_current_block.is_alive:
+                self.mining_current_block.interrupt()
         new_blocks = envelope.msg.get('hashes')
         print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
         # If the block is already known by a node, it does not need to request the block again
@@ -229,7 +230,15 @@ class BTCNode(Node):
             if self.chain.add_block(new_block):
                 del self.temp_headers[block.header.hash]
                 print(
-                    f'{self.address} at {self.env.now}: Block {new_block.header.hash[:8]} assembled and added to the blockchain')
+                    f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain  {new_block.header}')
+        # TODO: Delete next lines
+        head = self.chain.head
+        print(
+            f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
+        for i in range(head.header.number):
+            b = self.chain.get_block_by_number(i)
+            print(
+                f'{self.address} at {self.env.now}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
 
     def _send_transactions(self, envelope):
         """Send a full transaction for any node that request it, identified by the
