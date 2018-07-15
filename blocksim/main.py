@@ -2,15 +2,17 @@ from blocksim.world import SimulationWorld
 from blocksim.models.network import Network
 from blocksim.models.bitcoin.node import BTCNode
 from blocksim.models.transaction import Transaction
-from blocksim.models.block import Block, BlockHeader
+import numpy
 
 
 def set_simulation():
     WORLD = SimulationWorld(10000, 0, 'bitcoin',
+                            'measures-input/latency.json',
+                            'measures-input/bandwidth.json',
                             {'name': 'ups', 'parameters': (1, 45, 5)},
                             {'name': 'ups', 'parameters': (1, 45, 5)},
                             {'name': 'ups', 'parameters': (1, 45, 5)})
-    run_model(WORLD)
+    # run_model(WORLD)
 
 
 def run_model(world):

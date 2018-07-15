@@ -1,3 +1,4 @@
+import json
 import simpy
 from schema import Schema, And, Use, SchemaError
 
@@ -28,6 +29,8 @@ class SimulationWorld:
                  sim_duration: int,
                  initial_time: int,
                  blockchain: str,
+                 path_to_measure_latency: str,
+                 path_to_measure_bandwidth: str,
                  time_between_block_delay: dict,
                  validate_tx_delay: dict,
                  validate_block_delay: dict):
@@ -45,12 +48,16 @@ class SimulationWorld:
         self._sim_duration = sim_duration
         self._initial_time = initial_time
         self._blockchain = blockchain
+        self._path_to_measure_latency = path_to_measure_latency
+        self._path_to_measure_bandwidth = path_to_measure_bandwidth
         self._time_between_block_delay = time_between_block_delay
         self._validate_tx_delay = validate_tx_delay
         self._validate_block_delay = validate_block_delay
         # Set the SimPy Environment
         self._env = simpy.Environment(initial_time=self._initial_time)
         self._set_delays()
+        self._set_latencies()
+        self._set_bandwidths()
 
     def _validate_distribution(self, *distributions: dict):
         for distribution in distributions:
@@ -73,9 +80,39 @@ class SimulationWorld:
             TIME_BETWEEN_BLOCKS=self._time_between_block_delay,
         )
 
+    def _set_latencies(self):
+        """Reads the file with the latencies measurements taken"""
+        with open(self._path_to_measure_latency) as f:
+            data = json.load(f)
+        self._locations = list(data['locations'])
+        self._latencies = data['locations']
+
+    def _set_bandwidths(self):
+        """Reads the file with the bandwidths measurements taken"""
+        with open(self._path_to_measure_bandwidth) as f:
+            data = json.load(f)
+        locations = list(data['locations'])
+        if locations == self._locations:
+            self._bandwidths = data['locations']
+        else:
+            raise RuntimeError(
+                "The locations in latencies measurements are not equal in bandwidth measurements")
+
     @property
     def blockchain(self):
         return self._blockchain
+
+    @property
+    def locations(self):
+        return self._locations
+
+    @property
+    def latencies(self):
+        return self._latencies
+
+    @property
+    def bandwidths(self):
+        return self._bandwidths
 
     @property
     def environment(self):

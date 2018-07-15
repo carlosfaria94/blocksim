@@ -1,0 +1,19 @@
+{
+  "locations": {
+    "Tokyo": {
+      "Tokyo": {},
+      "Ireland": {},
+      "Ohio": {}
+    },
+    "Ireland": {
+      "Tokyo": {},
+      "Ireland": {},
+      "Ohio": {}
+    },
+    "Ohio": {
+      "Tokyo": {},
+      "Ireland": {},
+      "Ohio": {}
+    }
+  }
+}
