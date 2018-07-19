@@ -1,35 +1,46 @@
 from blocksim.world import SimulationWorld
+from blocksim.node_factory import NodeFactory
 from blocksim.models.network import Network
-from blocksim.models.bitcoin.node import BTCNode
 from blocksim.models.transaction import Transaction
-import numpy
 
 
 def set_simulation():
-    WORLD = SimulationWorld(10000, 0, 'bitcoin',
-                            'measures-input/latency.json',
-                            'measures-input/bandwidth.json',
-                            {'name': 'ups', 'parameters': (1, 45, 5)},
-                            {'name': 'ups', 'parameters': (1, 45, 5)},
-                            {'name': 'ups', 'parameters': (1, 45, 5)})
-    # run_model(WORLD)
+    world = SimulationWorld(
+        10000,
+        0,
+        'bitcoin',
+        'measures-input/latency.json',
+        'measures-input/download-bandwidth.json',
+        'measures-input/upload-bandwidth.json',
+        {'name': 'ups', 'parameters': (1, 45, 5)},
+        {'name': 'ups', 'parameters': (1, 45, 5)},
+        {'name': 'ups', 'parameters': (1, 45, 5)})
+
+    run_model(world)
 
 
 def run_model(world):
-    env = world.environment
-
     # Create the network
-    network = Network(env, 'NetworkXPTO')
+    network = Network(world.environment, 'NetworkXPTO')
 
-    node_lisbon = BTCNode(env, network, 1, 2, 3,
-                          'Lisbon', 'lisbon', True)
-    node_barcelona = BTCNode(env, network, 1, 2, 3,
-                             'Barcelona', 'barcelona', True)
-    node_berlin = BTCNode(env, network, 1, 2, 3, 'Berlin', 'berlin')
-
-    node_berlin.connect(5, node_lisbon, node_barcelona)
-    node_barcelona.connect(3, node_berlin, node_lisbon)
-    node_lisbon.connect(6, node_berlin, node_barcelona)
+    miners = {
+        'Ohio': {
+            'how_many': 2
+        },
+        'Ireland': {
+            'how_many': 1
+        }
+    }
+    non_miners = {
+        'Ohio': {
+            'how_many': 2
+        },
+        'Ireland': {
+            'how_many': 2
+        }
+    }
+    factory = NodeFactory(world, network)
+    nodes = factory.create_nodes(miners, non_miners)
 
     first_tx = Transaction(
         'lisbon-address', 'berlin-address', 140, 'sig1', 50)
@@ -39,7 +50,8 @@ def run_model(world):
         'lisbon-address', 'berlin-address', 1000, 'sig3', 10)
     transactions = [first_tx, second_tx, third_tx]
 
-    env.process(node_berlin.broadcast_transactions(transactions, 2))
+    world.environment.process(
+        nodes[2].broadcast_transactions(transactions, 2))
 
     world.start_simulation()
 

@@ -15,9 +15,6 @@ class ETHNode(Node):
     def __init__(self,
                  env,
                  network: Network,
-                 transmission_speed,
-                 download_rate,
-                 upload_rate,
                  location: str,
                  address: str,
                  is_mining=False):
@@ -27,9 +24,6 @@ class ETHNode(Node):
         chain = Chain(env, self, self.consensus, genesis, BaseDB())
         super().__init__(env,
                          network,
-                         transmission_speed,
-                         download_rate,
-                         upload_rate,
                          location,
                          address,
                          chain)
@@ -125,20 +119,21 @@ class ETHNode(Node):
             txs_intrinsic_gas)
         return Block(candidate_block_header, pending_txs)
 
-    def connect(self, upload_rate, *nodes):
-        super().connect(upload_rate, *nodes)
+    def connect(self, nodes: list):
+        super().connect(nodes)
         for node in nodes:
-            self._handshake(node.address, upload_rate)
+            self._handshake(node.address)
 
-    def _handshake(self, destination_address: str, upload_rate):
+    def _handshake(self, destination_address: str):
         """Handshake inform a node of its current ethereum state, negotiating network, difficulties,
         head and genesis blocks
         This message should be sent after the initial handshake and prior to any ethereum related messages."""
         status_msg = self.network_message.status()
         print(
             f'{self.address} at {self.env.now}: Status message sent to {destination_address}')
+        # TODO: Calculate here the upload rate according to the message size
         self.env.process(
-            self.send(destination_address, upload_rate, status_msg))
+            self.send(destination_address, 3, status_msg))
 
     def _receive_status(self, envelope):
         print(

@@ -2,7 +2,8 @@
   "locations": {
     "Tokyo": {
       "Tokyo": {
-        "latency": true
+        "name": "lognorm",
+        "parameters": "(0.7615979985548762, 37.9294503863391, 5.615680172493156)"
       },
       "Ireland": {},
       "Ohio": {}

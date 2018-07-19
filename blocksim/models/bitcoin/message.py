@@ -17,6 +17,7 @@ class Message:
         }
 
     def tx(self, tx):
+        """Sends a bitcoin transaction, in reply to getdata"""
         return {
             'id': 'tx',
             'tx': tx,
@@ -24,6 +25,7 @@ class Message:
         }
 
     def block(self, block):
+        """Sends the body of a bitcoin block in response to a getdata message which requests transaction information from a block hash"""
         return {
             'id': 'block',
             'block': block,
@@ -41,6 +43,7 @@ class Message:
         }
 
     def get_headers(self, block_number: int, max_headers: int, reverse: int):
+        """Requests a headers message that provides block headers starting from a particular point in the block chain"""
         return {
             'id': 'getheaders',
             'block_number': block_number,
@@ -50,8 +53,7 @@ class Message:
         }
 
     def headers(self, headers: list):
-        """ Reply to `get_headers` the items in the list are block headers.
-        """
+        """Sends block headers to a node which previously requested certain headers with a getheaders message"""
         return {
             'id': 'headers',
             'headers': headers,

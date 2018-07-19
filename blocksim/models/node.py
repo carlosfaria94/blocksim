@@ -20,7 +20,7 @@ class Node:
     not any mechanism to discover nodes.
 
     To properly stimulate a real world scenario, the node model needs to know the geographic
-    `location` and his `transmission_speed`.
+    `location`.
 
     In order to a node to be identified in the network simulation, is needed to have an `address`
     """
@@ -28,17 +28,11 @@ class Node:
     def __init__(self,
                  env,
                  network: Network,
-                 transmission_speed,
-                 download_rate,
-                 upload_rate,
                  location: str,
                  address: str,
                  chain: Chain):
         self.env = env
         self.network = network
-        self.transmission_speed = transmission_speed
-        self.download_rate = download_rate
-        self.upload_rate = upload_rate
         self.location = location
         self.address = address
         self.chain = chain
@@ -47,26 +41,31 @@ class Node:
         self.network.add_node(self)
         self.connecting = None
 
-    def connect(self, upload_rate, *nodes):
+    def connect(self, nodes: list):
         """Simulate an acknowledgement phase with given nodes.
         During simulation the nodes will have an active session."""
         for node in nodes:
-            connection = Connection(self.env, self, node)
-            self.active_sessions[node.address] = {
-                'connection': connection,
-                'knownTxs': {''},
-                'knownBlocks': {''}
-            }
-            self.connecting = self.env.process(
-                self._connecting(upload_rate, node, connection))
+            # Ignore when a node is trying to connect to itself
+            if node.address != self.address:
+                connection = Connection(self.env, self, node)
+                self.active_sessions[node.address] = {
+                    'connection': connection,
+                    'knownTxs': {''},
+                    'knownBlocks': {''}
+                }
+                print(node.address)
+                self.connecting = self.env.process(
+                    self._connecting(node, connection))
 
-    def _connecting(self, upload_rate, node, connection):
+    def _connecting(self, node, connection):
         """Simulates the time needed to perform TCP handshake and acknowledgement phase"""
         # TODO: Calculate a delay/timeout do simulate the TCP handshake + HELLO ACK protocol
         # TODO: Message size?
-        yield self.env.timeout(upload_rate)
-        print('{} at {}: Connection established with {}'.format(
-            self.address, self.env.now, node.address))
+        # TODO: Calculate here the upload rate according to the message size
+        # yield self.env.timeout(self.env.delays.upload_rate)
+        yield self.env.timeout(2)
+        print(
+            f'{self.address} at {self.env.now}: Connection established with {node.address}')
         # Start listening for messages from the destination node
         self.env.process(
             connection.destination_node.listening_node(connection))
@@ -103,7 +102,7 @@ class Node:
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
-            yield self.env.timeout(self.download_rate)
+            yield self.env.timeout(self.env.bandwidth.download_rate)
             self._read_envelope(envelope)
 
     def send(self, destination_address: str, upload_rate, msg):
@@ -121,7 +120,7 @@ class Node:
                 f'It is needed to initiate an ACK phase with {destination_address} before sending any other message')
 
         if upload_rate is None:
-            upload_rate = self.upload_rate
+            upload_rate = self.env.bandwidth.upload_rate
         yield self.env.timeout(upload_rate)
         envelope = Envelope(
             msg, self.env.now, active_connection.destination_node, active_connection.origin_node)
@@ -142,7 +141,7 @@ class Node:
             yield self.env.timeout(3)
             # TODO: When sending add an upload rate
             if upload_rate is None:
-                upload_rate = self.upload_rate
+                upload_rate = self.env.delays.upload_rate
             yield self.env.timeout(upload_rate)
             envelope = Envelope(
                 msg, self.env.now, connection.destination_node, connection.origin_node)

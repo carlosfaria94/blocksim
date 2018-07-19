@@ -11,9 +11,6 @@ class BaseDB:
     def delete(self, key):
         del self.db[key]
 
-    def commit(self):
-        pass
-
     def _has_key(self, key):
         return key in self.db
 

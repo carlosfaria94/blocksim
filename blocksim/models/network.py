@@ -20,7 +20,8 @@ class Connection:
     def __init__(self, env, origin_node, destination_node):
         self.env = env
         self.store = simpy.Store(env)
-        self.delay = 10  # TODO: This depends in the origin and destination
+        # TODO: self.env.delays['LATENCIES'] get the latencies between nodes
+        self.delay = 10
         self.origin_node = origin_node
         self.destination_node = destination_node
 

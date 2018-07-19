@@ -1,8 +1,10 @@
 from blocksim.models.ethereum.config import default_config
-from blocksim.utils import keccak_256, encode_hex
+from blocksim.utils import encode_hex
+from blocksim.models.block import BlockHeader as BaseBlockHeader
+from blocksim.models.block import Block as BaseBlock
 
 
-class BlockHeader:
+class BlockHeader(BaseBlockHeader):
     """ Defines the BlockHeader model for the Ethereum.
 
     In this first version of the simulator we do not simulate accounts, transactions merkle trees, uncles blocks, states and receipts
@@ -26,50 +28,11 @@ class BlockHeader:
                  gas_limit=default_config['GENESIS_GAS_LIMIT'],
                  gas_used=0,
                  nonce=''):
-        self.prevhash = prevhash
-        self.number = number
-        self.timestamp = timestamp
-        self.coinbase = coinbase
-        self.difficulty = difficulty
+        super().__init__(prevhash, number, timestamp, coinbase, difficulty, nonce)
         self.gas_limit = gas_limit
         self.gas_used = gas_used
-        self.nonce = nonce
-
-    @property
-    def hash(self):
-        """The block header hash"""
-        return encode_hex(keccak_256(str(self).encode('utf-8')))
-
-    def __repr__(self):
-        """Returns a unambiguous representation of the block header"""
-        return f'<{self.__class__.__name__}(#{self.number} {self.hash})>'
-
-    def __str__(self):
-        """Returns a readable representation of the block"""
-        return f'<{self.__class__.__name__}(#{self.number} prevhash:{self.prevhash} timestamp:{self.timestamp} coinbase:{self.coinbase} nonce:{self.nonce})>'
-
-    def __eq__(self, other):
-        """Two blocks are equal iff they have the same hash."""
-        return isinstance(other, self.__class__) and self.hash == other.hash
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return self.hash
 
 
-class Block:
-    """ Defines the Block model.
-
-    :param header: the block header
-    :param transactions: a list of transactions
-    """
-
+class Block(BaseBlock):
     def __init__(self, header: BlockHeader, transactions=None):
-        self.header = header
-        self.transactions = transactions
-
-    @property
-    def transaction_count(self):
-        return len(self.transactions)
+        super().__init__(header, transactions)

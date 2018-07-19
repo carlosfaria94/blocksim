@@ -15,9 +15,6 @@ class BTCNode(Node):
     def __init__(self,
                  env,
                  network: Network,
-                 transmission_speed,
-                 download_rate,
-                 upload_rate,
                  location: str,
                  address: str,
                  is_mining=False):
@@ -27,9 +24,6 @@ class BTCNode(Node):
         chain = Chain(env, self, self.consensus, genesis, BaseDB())
         super().__init__(env,
                          network,
-                         transmission_speed,
-                         download_rate,
-                         upload_rate,
                          location,
                          address,
                          chain)

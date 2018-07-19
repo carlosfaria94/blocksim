@@ -1,9 +1,9 @@
-from blocksim.models.transaction import Transaction
+from blocksim.models.transaction import Transaction as BaseTransaction
 from blocksim.utils import keccak_256, encode_hex
 from blocksim.models.ethereum.config import default_config
 
 
-class ETHTransaction(Transaction):
+class Transaction(BaseTransaction):
     """ Defines a simple transaction model for the Ethereum.
 
     :param to: destination address
