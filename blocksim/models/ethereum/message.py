@@ -24,6 +24,7 @@ class Message:
         }
 
     def new_blocks(self, new_blocks: dict):
+        """Advertises one or more new blocks which have appeared on the network"""
         return {
             'id': 'new_blocks',
             'new_blocks': new_blocks,
