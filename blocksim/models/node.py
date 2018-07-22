@@ -1,7 +1,7 @@
 from collections import namedtuple
-
 from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
+from blocksim.utils import get_transmission_delay
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
 
@@ -53,22 +53,23 @@ class Node:
                     'knownTxs': {''},
                     'knownBlocks': {''}
                 }
-                print(node.address)
                 self.connecting = self.env.process(
                     self._connecting(node, connection))
 
     def _connecting(self, node, connection):
         """Simulates the time needed to perform TCP handshake and acknowledgement phase"""
         # TODO: Calculate a delay/timeout do simulate the TCP handshake + HELLO ACK protocol
-        # TODO: Message size?
-        # TODO: Calculate here the upload rate according to the message size
-        # yield self.env.timeout(self.env.delays.upload_rate)
-        yield self.env.timeout(2)
+        # yield self.env.timeout(2)
+        origin_node = connection.origin_node
+        destination_node = connection.destination_node
+        # TODO: Message size? Should be the TCP handshake?
+        upload_transmission_delay = get_transmission_delay(
+            self.env, 1, False, origin_node.location, destination_node.location)
+        yield self.env.timeout(upload_transmission_delay)
         print(
             f'{self.address} at {self.env.now}: Connection established with {node.address}')
         # Start listening for messages from the destination node
-        self.env.process(
-            connection.destination_node.listening_node(connection))
+        self.env.process(destination_node.listening_node(connection))
 
     def _mark_block(self, block_hash: str, node_address: str):
         """Marks a block as known for a specific node, ensuring that it will never be
@@ -102,47 +103,53 @@ class Node:
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
-            yield self.env.timeout(self.env.bandwidth.download_rate)
+            origin_loc = envelope.origin.location
+            dest_loc = envelope.destination.location
+            message_size = envelope.msg['size']
+            trans_delay_download = get_transmission_delay(
+                self.env, message_size, True, origin_loc, dest_loc)
+            yield self.env.timeout(trans_delay_download)
             self._read_envelope(envelope)
 
-    def send(self, destination_address: str, upload_rate, msg):
+    def send(self, destination_address: str, upload_transmission_delay, msg):
         node = self.active_sessions.get(destination_address)
         active_connection = node.get('connection')
         if active_connection is None and msg['id'] == 0:
             # We do not have an active connection with the destination because its a ACK msg
             destination_node = self.network.get_node(destination_address)
             active_connection = Connection(self.env, self, destination_node)
-            # TODO: Calculate a delay/timeout do simulate the TCP handshake
-            yield self.env.timeout(3)
+            # TODO: Professor: Should I apply the delay for the TCP handshake?
+            # yield self.env.timeout(3)
         elif active_connection is None and msg['id'] != 0:
             # We do not have a connection and the message is not an ACK
             raise RuntimeError(
                 f'It is needed to initiate an ACK phase with {destination_address} before sending any other message')
 
-        if upload_rate is None:
-            upload_rate = self.env.bandwidth.upload_rate
-        yield self.env.timeout(upload_rate)
-        envelope = Envelope(
-            msg, self.env.now, active_connection.destination_node, active_connection.origin_node)
+        origin_node = active_connection.origin_node
+        destination_node = active_connection.destination_node
+        if upload_transmission_delay is None:
+            upload_transmission_delay = get_transmission_delay(
+                self.env, msg['size'], False, origin_node.location, destination_node.location)
+        yield self.env.timeout(upload_transmission_delay)
+        envelope = Envelope(msg, self.env.now, destination_node, origin_node)
         active_connection.put(envelope)
 
-    def broadcast(self, upload_rate, msg):
+    def broadcast(self, upload_transmission_delay, msg):
         """Broadcast a message to all nodes with an active session"""
-        # TODO: Add a Store here to queue the messages that need to be sent
-
         for node_address, node in self.active_sessions.items():
             connection = node.get('connection')
-
             if connection is None:
                 raise RuntimeError(
                     f'Not possible to create a direct connection with the node {node_address}')
 
-            # TODO: Calculate a delay/timeout do simulate the TCP handshake ??
-            yield self.env.timeout(3)
-            # TODO: When sending add an upload rate
-            if upload_rate is None:
-                upload_rate = self.env.delays.upload_rate
-            yield self.env.timeout(upload_rate)
-            envelope = Envelope(
-                msg, self.env.now, connection.destination_node, connection.origin_node)
+            # TODO: Professor: Should I apply the delay for the TCP handshake?
+            # yield self.env.timeout(3)
+            origin_node = connection.origin_node
+            destination_node = connection.destination_node
+            if upload_transmission_delay is None:
+                upload_transmission_delay = get_transmission_delay(
+                    self.env, msg['size'], False, origin_node.location, destination_node.location)
+            yield self.env.timeout(upload_transmission_delay)
+            envelope = Envelope(msg, self.env.now,
+                                destination_node, origin_node)
             connection.put(envelope)

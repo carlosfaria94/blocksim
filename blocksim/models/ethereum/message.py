@@ -20,7 +20,7 @@ class Message:
             'td': self.origin_node.chain.head.header.difficulty,
             'best_hash': self.origin_node.chain.head.header.hash,
             'genesis_hash': self.origin_node.chain.genesis.header.hash,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def new_blocks(self, new_blocks: dict):
@@ -28,7 +28,7 @@ class Message:
         return {
             'id': 'new_blocks',
             'new_blocks': new_blocks,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def transactions(self, transactions: list):
@@ -39,7 +39,7 @@ class Message:
         return {
             'id': 'transactions',
             'transactions': transactions,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def get_headers(self, block_number: int, max_headers: int, reverse: int):
@@ -48,7 +48,7 @@ class Message:
             'block_number': block_number,
             'max_headers': max_headers,
             'reverse': reverse,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def block_headers(self, block_headers: list):
@@ -59,14 +59,14 @@ class Message:
         return {
             'id': 'block_headers',
             'block_headers': block_headers,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def get_block_bodies(self, hashes: list):
         return {
             'id': 'get_block_bodies',
             'hashes': hashes,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def block_bodies(self, block_bodies: dict):
@@ -76,5 +76,5 @@ class Message:
         return {
             'id': 'block_bodies',
             'block_bodies': block_bodies,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }

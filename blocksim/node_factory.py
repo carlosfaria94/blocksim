@@ -25,7 +25,7 @@ class NodeFactory:
             for i in range(_miners['how_many']):
                 node_id += 1
                 node_address = f'{miner_location.lower()}-{node_id}'
-                new = BTCNode(self._world.environment,
+                new = BTCNode(self._world.env,
                               self._network,
                               miner_location,
                               node_address,
@@ -37,7 +37,7 @@ class NodeFactory:
             for i in range(_miners['how_many']):
                 node_id += 1
                 node_address = f'{miner_location.lower()}-{node_id}'
-                new = BTCNode(self._world.environment,
+                new = BTCNode(self._world.env,
                               self._network,
                               miner_location,
                               node_address,
@@ -47,7 +47,6 @@ class NodeFactory:
         nodes_list = miners_list + non_miners_list
         print(f'Creating {len(nodes_list)} bitcoin nodes')
         for node in nodes_list:
-            print(f'Connecting {node.address} with:')
             node.connect(nodes_list)
         return nodes_list
 
@@ -59,7 +58,7 @@ class NodeFactory:
             for i in range(_miners['how_many']):
                 node_id += 1
                 node_address = f'{miner_location.lower()}-{node_id}'
-                new = ETHNode(self._world.environment,
+                new = ETHNode(self._world.env,
                               self._network,
                               miner_location,
                               node_address,
@@ -71,7 +70,7 @@ class NodeFactory:
             for i in range(_miners['how_many']):
                 node_id += 1
                 node_address = f'{miner_location.lower()}-{node_id}'
-                new = ETHNode(self._world.environment,
+                new = ETHNode(self._world.env,
                               self._network,
                               miner_location,
                               node_address,

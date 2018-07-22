@@ -20,13 +20,12 @@ class Connection:
     def __init__(self, env, origin_node, destination_node):
         self.env = env
         self.store = simpy.Store(env)
-        # TODO: self.env.delays['LATENCIES'] get the latencies between nodes
-        self.delay = 10
         self.origin_node = origin_node
         self.destination_node = destination_node
 
     def latency(self, envelope):
-        yield self.env.timeout(self.delay)
+        # TODO: Professor: Onde é aplicado o delay/RTT/ping? Ao calcular transmission_delay?
+        yield self.env.timeout(2)
         self.store.put(envelope)
 
     def put(self, envelope):

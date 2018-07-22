@@ -13,7 +13,7 @@ class Message:
             'id': 'inv',
             'type': type,
             'hashes': hashes,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def tx(self, tx):
@@ -21,7 +21,7 @@ class Message:
         return {
             'id': 'tx',
             'tx': tx,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def block(self, block):
@@ -29,7 +29,7 @@ class Message:
         return {
             'id': 'block',
             'block': block,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def get_data(self, hashes: list, type: str):
@@ -39,7 +39,7 @@ class Message:
             'id': 'getdata',
             'type': type,
             'hashes': hashes,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def get_headers(self, block_number: int, max_headers: int, reverse: int):
@@ -49,7 +49,7 @@ class Message:
             'block_number': block_number,
             'max_headers': max_headers,
             'reverse': reverse,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }
 
     def headers(self, headers: list):
@@ -57,5 +57,5 @@ class Message:
         return {
             'id': 'headers',
             'headers': headers,
-            'size': 10  # TODO: Measure the size message
+            'size': 10
         }

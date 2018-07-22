@@ -32,9 +32,7 @@ class SimulationWorld:
                  measured_latency: str,
                  measured_download_bandwidth: str,
                  measured_upload_bandwidth: str,
-                 time_between_block_delay: dict,
-                 validate_tx_delay: dict,
-                 validate_block_delay: dict):
+                 measured_delays: str):
         if isinstance(sim_duration, int) is False:
             raise TypeError(
                 'sim_duration needs to be an integer')
@@ -44,73 +42,19 @@ class SimulationWorld:
         if isinstance(blockchain, str) is False:
             raise TypeError(
                 'blockchain needs to be a string')
-        self._validate_distribution(
-            time_between_block_delay, validate_tx_delay, validate_block_delay)
+        self._measured_delays = self._read_json_file(measured_delays)
         self._sim_duration = sim_duration
         self._initial_time = initial_time
         self._blockchain = blockchain
         self._measured_latency = measured_latency
         self._measured_download_bandwidth = measured_download_bandwidth
         self._measured_upload_bandwidth = measured_upload_bandwidth
-        self._time_between_block_delay = time_between_block_delay
-        self._validate_tx_delay = validate_tx_delay
-        self._validate_block_delay = validate_block_delay
         # Set the SimPy Environment
         self._env = simpy.Environment(initial_time=self._initial_time)
         self._set_delays()
         self._set_latencies()
         self._set_download_bandwidths()
         self._set_upload_bandwidths()
-
-    def _validate_distribution(self, *distributions: dict):
-        for distribution in distributions:
-            distribution_schema = Schema({
-                'name': str,
-                'parameters': tuple
-            })
-            try:
-                distribution_schema.validate(distribution)
-            except SchemaError:
-                raise TypeError(
-                    'Probability distribution must follow this schema: { \'name\': str, \'parameters\': tuple }')
-
-    def _set_delays(self):
-        """Injects the probability distribution delays in the environment variable to be
-        used during the simulation"""
-        self._env.delays = dict(
-            VALIDATE_TX=self._validate_tx_delay,
-            VALIDATE_BLOCK=self._validate_block_delay,
-            TIME_BETWEEN_BLOCKS=self._time_between_block_delay,
-        )
-
-    def _set_latencies(self):
-        """Reads the file with the latencies measurements taken"""
-        with open(self._measured_latency) as f:
-            data = json.load(f)
-        self._locations = list(data['locations'])
-        self._env.delays.update(dict(LATENCIES=data['locations']))
-
-    def _set_download_bandwidths(self):
-        """Reads the file with the download bandwidths measurements taken"""
-        with open(self._measured_download_bandwidth) as f:
-            data = json.load(f)
-        locations = list(data['locations'])
-        if locations == self._locations:
-            self._env.delays.update(dict(DOWNLOAD_BANDWIDTH=data['locations']))
-        else:
-            raise RuntimeError(
-                "The locations in latencies measurements are not equal in download bandwidth measurements")
-
-    def _set_upload_bandwidths(self):
-        """Reads the file with the upload bandwidths measurements taken"""
-        with open(self._measured_upload_bandwidth) as f:
-            data = json.load(f)
-        locations = list(data['locations'])
-        if locations == self._locations:
-            self._env.delays.update(dict(UPLOAD_BANDWIDTH=data['locations']))
-        else:
-            raise RuntimeError(
-                "The locations in latencies measurements are not equal in upload bandwidth measurements")
 
     @property
     def blockchain(self):
@@ -121,10 +65,61 @@ class SimulationWorld:
         return self._locations
 
     @property
-    def environment(self):
+    def env(self):
         return self._env
 
-    @property
     def start_simulation(self):
-        run = self._env.run(until=self._sim_duration)
-        return run
+        self._env.run(until=self._sim_duration)
+
+    def _set_delays(self):
+        """Injects the probability distribution delays in the environment variable to be
+        used during the simulation"""
+        self._validate_distribution(
+            self._measured_delays['tx_validation'],
+            self._measured_delays['block_validation'])
+        self._env.delays = dict(
+            VALIDATE_TX=self._measured_delays['tx_validation'],
+            VALIDATE_BLOCK=self._measured_delays['block_validation']
+        )
+
+    def _set_latencies(self):
+        """Reads the file with the latencies measurements taken"""
+        data = self._read_json_file(self._measured_latency)
+        self._locations = list(data['locations'])
+        self._env.delays.update(dict(LATENCIES=data['locations']))
+
+    def _set_download_bandwidths(self):
+        """Reads the file with the download bandwidths measurements taken"""
+        data = self._read_json_file(self._measured_download_bandwidth)
+        locations = list(data['locations'])
+        if locations == self._locations:
+            self._env.delays.update(dict(DOWNLOAD_BANDWIDTH=data['locations']))
+        else:
+            raise RuntimeError(
+                "The locations in latencies measurements are not equal in download bandwidth measurements")
+
+    def _set_upload_bandwidths(self):
+        """Reads the file with the upload bandwidths measurements taken"""
+        data = self._read_json_file(self._measured_upload_bandwidth)
+        locations = list(data['locations'])
+        if locations == self._locations:
+            self._env.delays.update(dict(UPLOAD_BANDWIDTH=data['locations']))
+        else:
+            raise RuntimeError(
+                "The locations in latencies measurements are not equal in upload bandwidth measurements")
+
+    def _validate_distribution(self, *distributions: dict):
+        for distribution in distributions:
+            distribution_schema = Schema({
+                'name': str,
+                'parameters': str
+            })
+            try:
+                distribution_schema.validate(distribution)
+            except SchemaError:
+                raise TypeError(
+                    'Probability distribution must follow this schema: { \'name\': str, \'parameters\': tuple as a string }')
+
+    def _read_json_file(self, file_location):
+        with open(file_location) as f:
+            return json.load(f)

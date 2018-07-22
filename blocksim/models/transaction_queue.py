@@ -1,4 +1,5 @@
 import simpy
+from blocksim.utils import get_random_values
 
 
 class TransactionQueue():
@@ -8,7 +9,9 @@ class TransactionQueue():
         self.store = simpy.PriorityStore(env)
 
     def validate_tx(self, tx):
-        yield self.env.timeout(self.env.delays['VALIDATE_TX'])
+        tx_validation_delay = round(get_random_values(
+            self.env.delays['VALIDATE_TX'])[0], 2)
+        yield self.env.timeout(tx_validation_delay)
         self.store.put(tx)
         print('{} at {}: Transaction {} added to the queue'
               .format(

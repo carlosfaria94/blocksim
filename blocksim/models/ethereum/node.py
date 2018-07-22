@@ -131,9 +131,8 @@ class ETHNode(Node):
         status_msg = self.network_message.status()
         print(
             f'{self.address} at {self.env.now}: Status message sent to {destination_address}')
-        # TODO: Calculate here the upload rate according to the message size
         self.env.process(
-            self.send(destination_address, 3, status_msg))
+            self.send(destination_address, None, status_msg))
 
     def _receive_status(self, envelope):
         print(
@@ -244,7 +243,7 @@ class ETHNode(Node):
                     del self.temp_headers[block_hash]
                     print(
                         f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain  {new_block.header}')
-        # TODO: Delete next lines
+        # TODO: Delete next lines. We need to have another way to see the final state of the chain for each node
         head = self.chain.head
         print(
             f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')

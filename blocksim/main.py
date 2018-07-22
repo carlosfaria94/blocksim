@@ -6,34 +6,31 @@ from blocksim.models.transaction import Transaction
 
 def set_simulation():
     world = SimulationWorld(
-        10000,
+        100000,
         0,
         'bitcoin',
         'measures-input/latency.json',
         'measures-input/download-bandwidth.json',
         'measures-input/upload-bandwidth.json',
-        {'name': 'ups', 'parameters': (1, 45, 5)},
-        {'name': 'ups', 'parameters': (1, 45, 5)},
-        {'name': 'ups', 'parameters': (1, 45, 5)})
-
+        'measures-input/delays.json')
     run_model(world)
 
 
 def run_model(world):
     # Create the network
-    network = Network(world.environment, 'NetworkXPTO')
+    network = Network(world.env, 'NetworkXPTO')
 
     miners = {
         'Ohio': {
-            'how_many': 2
+            'how_many': 1
         },
         'Ireland': {
-            'how_many': 1
+            'how_many': 2
         }
     }
     non_miners = {
         'Ohio': {
-            'how_many': 2
+            'how_many': 1
         },
         'Ireland': {
             'how_many': 2
@@ -50,8 +47,7 @@ def run_model(world):
         'lisbon-address', 'berlin-address', 1000, 'sig3', 10)
     transactions = [first_tx, second_tx, third_tx]
 
-    world.environment.process(
-        nodes[2].broadcast_transactions(transactions, 2))
+    world.env.process(nodes[2].broadcast_transactions(transactions, 2))
 
     world.start_simulation()
 

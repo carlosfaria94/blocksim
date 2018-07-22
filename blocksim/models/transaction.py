@@ -29,7 +29,7 @@ class Transaction:
     @property
     def size(self):
         """Calculates the size of the transaction"""
-        return 1  # TODO
+        return 1  # TODO Vai buscar o tamanho da transação ao config file
 
     @property
     def hash(self):

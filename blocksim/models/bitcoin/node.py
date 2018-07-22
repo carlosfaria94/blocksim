@@ -78,7 +78,7 @@ class BTCNode(Node):
             while True:
                 candidate_block.header.nonce = 'MINED'
                 # A mining process will be delayed according to a normal distribution previously measured
-                yield self.env.timeout(self.env.delays['TIME_BETWEEN_BLOCKS'])
+                yield self.env.timeout(2)
                 # But, finding the solution to the cryptographic puzzle can be random as flipping a coin
                 solved_puzzle = bool(random.getrandbits(1))
                 if solved_puzzle is True:
@@ -225,7 +225,7 @@ class BTCNode(Node):
                 del self.temp_headers[block.header.hash]
                 print(
                     f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain  {new_block.header}')
-        # TODO: Delete next lines
+        # TODO: Delete next lines. We need to have another way to see the final state of the chain for each node
         head = self.chain.head
         print(
             f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
