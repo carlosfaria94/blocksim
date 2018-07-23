@@ -9,6 +9,7 @@ from blocksim.models.consensus import Consensus
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
 from blocksim.models.config import default_config
+from blocksim.utils import get_random_values
 
 
 class BTCNode(Node):
@@ -29,13 +30,13 @@ class BTCNode(Node):
                          chain)
         self.is_mining = is_mining
         self.config = default_config
-        self.temp_headers = {}
         self.temp_txs = {}
         self.tx_on_transit = {}
         self.network_message = Message(self)
         if is_mining:
             # Transaction Queue to store the transactions
-            self.transaction_queue = TransactionQueue(env, self)
+            self.transaction_queue = TransactionQueue(
+                env, self, self.consensus)
             self.mining_current_block = None
             env.process(self._init_mining())
 
@@ -86,7 +87,7 @@ class BTCNode(Node):
                         f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
 
                     # We need to broadcast the new candidate block across the network
-                    self.broadcast_new_blocks([candidate_block], None)
+                    self.broadcast_new_blocks([candidate_block])
 
                     # Add the candidate block to the chain of the miner node
                     self.chain.add_block(candidate_block)
@@ -117,77 +118,36 @@ class BTCNode(Node):
         return Block(candidate_block_header, pending_txs)
 
     def _read_envelope(self, envelope):
+        """It implements how bitcon P2P protocol works, more info here:
+        https://bitcoin.org/en/developer-reference#p2p-network"""
         super()._read_envelope(envelope)
         if envelope.msg['id'] == 'inv':
             if envelope.msg['type'] == 'block':
-                self._receive_new_blocks(envelope)
+                self._receive_new_inv_blocks(envelope)
             if envelope.msg['type'] == 'tx':
-                self._receive_new_transactions(envelope)
-        if envelope.msg['id'] == 'getheaders':
-            self._send_headers(envelope)
-        if envelope.msg['id'] == 'headers':
-            self._receive_headers(envelope)
+                self._receive_new_inv_transactions(envelope)
         if envelope.msg['id'] == 'getdata':
             if envelope.msg['type'] == 'block':
-                self._send_blocks(envelope)
+                self._send_full_blocks(envelope)
             if envelope.msg['type'] == 'tx':
-                self._send_transactions(envelope)
+                self._send_full_transactions(envelope)
         if envelope.msg['id'] == 'block':
-            self._receive_block(envelope)
+            self._receive_full_block(envelope)
         if envelope.msg['id'] == 'tx':
-            self._receive_transaction(envelope)
+            self._receive_full_transaction(envelope)
 
-    def _receive_transaction(self, envelope):
-        """Handle full tx received"""
-        transaction = envelope.msg.get('tx')
-        del self.tx_on_transit[transaction.hash]
-        # If node is miner store transactions in a pool
-        if self.is_mining:
-            self.transaction_queue.put(transaction)
-        else:
-            #TODO: validate_transaction('', tx)
-            self.env.process(
-                self.broadcast_transactions([transaction], None))
+    ##              ##
+    ## Transactions ##
+    ##              ##
 
-    def _receive_new_transactions(self, envelope):
-        """Handle new transactions received"""
-        request_txs = []
-        for tx_hash in envelope.msg.get('hashes'):
-            # Only request full TX that are not on transit
-            if tx_hash not in self.tx_on_transit:
-                request_txs.append(tx_hash)
-        # Request the full TX
-        if request_txs:
-            self.request_txs(request_txs, envelope.origin.address)
+    def request_txs(self, hashes: list, destination_address: str):
+        """Request transactions to a specific node by `destination_address`"""
+        for tx_hash in hashes:
+            self.tx_on_transit[tx_hash] = tx_hash
+        get_data_msg = self.network_message.get_data(hashes, 'tx')
+        self.env.process(self.send(destination_address, None, get_data_msg))
 
-    def _receive_new_blocks(self, envelope):
-        """Handle new blocks received.
-        The destination only receives the hash and number of the block. It is needed
-        to ask for the header and body."""
-        if self.is_mining:
-            if self.mining_current_block and self.mining_current_block.is_alive:
-                self.mining_current_block.interrupt()
-        new_blocks = envelope.msg.get('hashes')
-        print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
-        # If the block is already known by a node, it does not need to request the block again
-        block_numbers = []
-        for block_hash, block_number in new_blocks.items():
-            if self.chain.get_block(block_hash) is None:
-                block_numbers.append(block_number)
-        lowest_block_number = min(block_numbers)
-        self.request_headers(
-            lowest_block_number, len(new_blocks), 0, envelope.origin.address)
-
-    def broadcast_new_blocks(self, new_blocks, upload_rate):
-        """Specify one or more new blocks which have appeared on the network."""
-        new_blocks_hashes = {}
-        for block in new_blocks:
-            new_blocks_hashes[block.header.hash] = block.header.number
-
-        new_blocks_msg = self.network_message.inv(new_blocks_hashes, 'block')
-        self.env.process(self.broadcast(upload_rate, new_blocks_msg))
-
-    def broadcast_transactions(self, transactions: list, upload_rate):
+    def broadcast_transactions(self, transactions: list):
         """Broadcast transactions to all nodes with an active session and mark the hashes
         as known by each node"""
         yield self.connecting  # Wait for all connections
@@ -201,30 +161,93 @@ class BTCNode(Node):
                     print(
                         f'{self.address} at {self.env.now}: Transaction {tx.hash[:8]} was already sent to {node_address}')
                 else:
+                    # Calculates the delay to validate the tx
+                    tx_validation_delay = self.consensus.validate_transaction()
+                    yield self.env.timeout(tx_validation_delay)
                     self._mark_transaction(tx.hash, node_address)
                     transactions_hashes.append(tx.hash)
-
         # Only send if it has transactions hashes
         if transactions_hashes:
             print(
                 f'{self.address} at {self.env.now}: {len(transactions_hashes)} transaction(s) ready to be announced')
             transactions_msg = self.network_message.inv(
                 transactions_hashes, 'tx')
+            self.env.process(self.broadcast(None, transactions_msg))
 
-            self.env.process(self.broadcast(upload_rate, transactions_msg))
-
-    def _receive_block(self, envelope):
-        """Handle block bodies received
-        Assemble the block header in a temporary list with the block body received and
-        inserted into the blockchain"""
-        block = envelope.msg.get('block')
-        if block.header.hash in self.temp_headers:
-            header = self.temp_headers.get(block.header.hash)
-            new_block = Block(header, block.transactions)
-            if self.chain.add_block(new_block):
-                del self.temp_headers[block.header.hash]
+    def _send_full_transactions(self, envelope):
+        """Send a full transaction for any node that request it, identified by the
+        `destination_address`. In `envelope.msg['hashes']` we obtain a list of hashes of
+        transactions being requested
+        """
+        for tx_hash in envelope.msg['hashes']:
+            if tx_hash in self.temp_txs:
+                tx = self.temp_txs[tx_hash]
+                del self.temp_txs[tx_hash]
                 print(
-                    f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain  {new_block.header}')
+                    f'{self.address} at {self.env.now}: Full transaction {tx.hash[:8]} preapred to send')
+                tx_msg = self.network_message.tx(tx)
+                self.env.process(
+                    self.send(envelope.origin.address, None, tx_msg))
+
+    def _receive_new_inv_transactions(self, envelope):
+        """Handle new transactions received"""
+        request_txs = []
+        for tx_hash in envelope.msg.get('hashes'):
+            # Only request full TX that are not on transit
+            if tx_hash not in self.tx_on_transit:
+                request_txs.append(tx_hash)
+        # Request the full TX
+        if request_txs:
+            self.request_txs(request_txs, envelope.origin.address)
+
+    def _receive_full_transaction(self, envelope):
+        """Handle full tx received"""
+        transaction = envelope.msg.get('tx')
+        del self.tx_on_transit[transaction.hash]
+        # If node is miner store transactions in a pool
+        if self.is_mining:
+            self.transaction_queue.put(transaction)
+        else:
+            self.env.process(
+                self.broadcast_transactions([transaction]))
+
+    ##              ##
+    ## Blocks       ##
+    ##              ##
+
+    def broadcast_new_blocks(self, new_blocks: list):
+        """Specify one or more new blocks which have appeared on the network."""
+        new_blocks_hashes = [b.header.hash for b in new_blocks]
+        new_blocks_msg = self.network_message.inv(new_blocks_hashes, 'block')
+        self.env.process(self.broadcast(None, new_blocks_msg))
+
+    def _receive_new_inv_blocks(self, envelope):
+        """Handle new `inv` blocks received (https://bitcoin.org/en/developer-reference#inv).
+        The destination only receives the hash of the block, and then ask for the entire block
+        by calling `getdata` netowork protocol message (https://bitcoin.org/en/developer-reference#getdata)."""
+        if self.is_mining:
+            if self.mining_current_block and self.mining_current_block.is_alive:
+                self.mining_current_block.interrupt()
+        new_blocks_hashes = envelope.msg.get('hashes')
+        print(
+            f'{self.address} at {self.env.now}: {len(new_blocks_hashes)} new blocks announced by {envelope.origin.address}')
+        get_data_msg = self.network_message.get_data(
+            new_blocks_hashes, 'block')
+        self.env.process(
+            self.send(envelope.origin.address, None, get_data_msg))
+
+    def _receive_full_block(self, envelope):
+        """Handle full blocks received.
+        The node tries to add the block to the chain, by performing validation."""
+        block = envelope.msg['block']
+        is_added = self.chain.add_block(block)
+        if is_added:
+            print(
+                f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain {block.header}')
+        else:
+            print(
+                f'{self.address} at {self.env.now}: Block NOT added to the chain {block.header}')
+
         # TODO: Delete next lines. We need to have another way to see the final state of the chain for each node
         head = self.chain.head
         print(
@@ -234,103 +257,15 @@ class BTCNode(Node):
             print(
                 f'{self.address} at {self.env.now}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
 
-    def _send_transactions(self, envelope):
-        """Send a full transaction for any node that request it, identified by the
-        `destination_address`. In `request['hashes']` we obtain a list of hashes of
-        block bodies being requested
+    def _send_full_blocks(self, envelope):
+        """Send a full block (https://bitcoin.org/en/developer-reference#block) for any node that
+        request it (`envelope.origin.address`) by using `getdata`.
+        In `envelope.msg['hashes']` we obtain a list of hashes of full blocks being requested
         """
-        for tx_hash in envelope.msg.get('hashes'):
-            if tx_hash in self.temp_txs:
-                tx = self.temp_txs.get(tx_hash)
-                del self.temp_txs[tx_hash]
-
-                print(
-                    f'{self.address} at {self.env.now}: Full transaction {tx.hash[:8]} preapred to send')
-
-                tx_msg = self.network_message.tx(tx)
-                self.env.process(
-                    self.send(envelope.origin.address, None, tx_msg))
-
-    def _send_blocks(self, envelope):
-        """Send the block for any node that request it, identified by the `destination_address`.
-        In `request['hashes']` we obtain a list of hashes of block bodies being requested
-        """
-        for block_hash in envelope.msg.get('hashes'):
+        origin = envelope.origin.address
+        for block_hash in envelope.msg['hashes']:
             block = self.chain.get_block(block_hash)
-
             print(
-                f'{self.address} at {self.env.now}: Block {block.header.hash[:8]} preapred to send')
-
-            block_bodies_msg = self.network_message.block(block)
-            self.env.process(
-                self.send(envelope.origin.address, None, block_bodies_msg))
-
-    def request_bodies(self, hashes: list, destination_address: str, upload_rate=None):
-        get_data_msg = self.network_message.get_data(hashes, 'block')
-        self.env.process(
-            self.send(destination_address, upload_rate, get_data_msg))
-
-    def request_txs(self, hashes: list, destination_address: str, upload_rate=None):
-        # Mark transaction on transit
-        for tx_hash in hashes:
-            self.tx_on_transit[tx_hash] = tx_hash
-        get_data_msg = self.network_message.get_data(hashes, 'tx')
-        self.env.process(
-            self.send(destination_address, upload_rate, get_data_msg))
-
-    def _receive_headers(self, envelope):
-        """Handle block headers received.
-        Receive the headers, validate the headers, save on a temporary list and then
-        ask for the bodies of the block"""
-        block_headers = envelope.msg.get('headers')
-        # Save the header in a temporary list
-        hashes = []
-        for header in block_headers:
-            self.temp_headers[header.hash] = header
-            hashes.append(header.hash)
-        self.request_bodies(hashes, envelope.origin.address)
-
-    def _send_headers(self, envelope):
-        """Send block headers for any node that request it, identified by the `destination_address`"""
-        block_number = envelope.msg.get('block_number', 0)
-        max_headers = envelope.msg.get('max_headers', 1)
-        reverse = envelope.msg.get('reverse', 1)
-
-        # In bitcoin we can only send a maximum of 20000 block headers
-        if max_headers > 2000:
-            max_headers = 2000
-
-        block_hash = self.chain.get_blockhash_by_number(block_number)
-        block_hashes = self.chain.get_blockhashes_from_hash(
-            block_hash, max_headers)
-
-        block_headers = []
-        for _block_hash in block_hashes:
-            block_header = self.chain.get_block(_block_hash).header
-            block_headers.append(block_header)
-        if reverse == 0:
-            block_headers.reverse()
-
-        print(
-            f'{self.address} at {self.env.now}: {len(block_headers)} Block header(s) preapred to send')
-
-        headers_msg = self.network_message.headers(block_headers)
-        self.env.process(
-            self.send(envelope.origin.address, None, headers_msg))
-
-    def request_headers(self,
-                        block_number: int,
-                        max_headers: int,
-                        reverse: int,
-                        destination_address: str,
-                        upload_rate=None):
-        """Request a node (identified by the `destination_address`) to return block headers.
-
-        Request must contain a number of block headers, of rising number when `reverse` is `0`,
-        falling when `1`, beginning at `block_number`.
-        At most `max_headers` items.
-        """
-        get_headers_msg = self.network_message.get_headers(
-            block_number, max_headers, reverse)
-        self.env.process(
-            self.send(destination_address, upload_rate, get_headers_msg))
+                f'{self.address} at {self.env.now}: Block {block.header.hash[:8]} preapred to send to {origin}')
+            block_msg = self.network_message.block(block)
+            self.env.process(self.send(origin, None, block_msg))

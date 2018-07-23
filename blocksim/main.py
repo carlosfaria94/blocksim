@@ -47,7 +47,7 @@ def run_model(world):
         'lisbon-address', 'berlin-address', 1000, 'sig3', 10)
     transactions = [first_tx, second_tx, third_tx]
 
-    world.env.process(nodes[2].broadcast_transactions(transactions, 2))
+    world.env.process(nodes[2].broadcast_transactions(transactions))
 
     world.start_simulation()
 

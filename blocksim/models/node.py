@@ -66,8 +66,8 @@ class Node:
         upload_transmission_delay = get_transmission_delay(
             self.env, 1, False, origin_node.location, destination_node.location)
         yield self.env.timeout(upload_transmission_delay)
-        print(
-            f'{self.address} at {self.env.now}: Connection established with {node.address}')
+        # print(
+        #    f'{self.address} at {self.env.now}: Connection established with {node.address}')
         # Start listening for messages from the destination node
         self.env.process(destination_node.listening_node(connection))
 
@@ -98,8 +98,8 @@ class Node:
             f'{self.address} at {self.env.now}: Receive a message (ID: {envelope.msg["id"]}) created at {envelope.timestamp} from {envelope.origin.address}')
 
     def listening_node(self, connection):
-        print('{} at {}: Listening for connections from the {}'
-              .format(self.address, self.env.now, connection.origin_node.address))
+        # print('{} at {}: Listening for connections from the {}'
+        #      .format(self.address, self.env.now, connection.origin_node.address))
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()

@@ -7,11 +7,11 @@ class Message:
     def __init__(self, origin_node):
         self.origin_node = origin_node
 
-    def inv(self, hashes, type: str):
+    def inv(self, hashes: list, _type: str):
         """Allows a node to advertise its knowledge of one or more transactions or blocks"""
         return {
             'id': 'inv',
-            'type': type,
+            'type': _type,
             'hashes': hashes,
             'size': 10
         }
@@ -32,12 +32,12 @@ class Message:
             'size': 10
         }
 
-    def get_data(self, hashes: list, type: str):
+    def get_data(self, hashes: list, _type: str):
         """Used to retrieve the content of a specific type (e.g. block or transaction).
         It can be used to retrieve transactions or blocks"""
         return {
             'id': 'getdata',
-            'type': type,
+            'type': _type,
             'hashes': hashes,
             'size': 10
         }

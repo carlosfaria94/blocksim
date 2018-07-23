@@ -33,7 +33,8 @@ class ETHNode(Node):
         self.network_message = Message(self)
         if is_mining:
             # Transaction Queue to store the transactions
-            self.transaction_queue = TransactionQueue(env, self)
+            self.transaction_queue = TransactionQueue(
+                env, self, self.consensus)
             self.mining_current_block = None
             env.process(self._init_mining())
         self.handshaking = env.event()
@@ -215,7 +216,7 @@ class ETHNode(Node):
             for tx in transactions:
                 self.transaction_queue.put(tx)
         else:
-            #TODO: validate_transaction('', tx)
+            self.env.process(self.consensus.validate_transaction())
             self.env.process(self.broadcast_transactions(transactions, None))
 
     def _receive_block_headers(self, envelope):

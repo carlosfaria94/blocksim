@@ -1,4 +1,5 @@
 from blocksim.models.ethereum.config import default_config
+from blocksim.utils import get_random_values
 
 
 class Consensus:
@@ -38,7 +39,7 @@ class Consensus:
         For now, it only applies a delay in simulation, corresponding to previous measurements"""
         yield self.env.timeout(duration)
 
-    def validate_transaction(self, duration, state=None, tx=None):
+    def validate_transaction(self, tx=None):
         """ Simulates the transaction validation.
-        For now, it only applies a delay in simulation, corresponding to previous measurements"""
-        yield self.env.timeout(duration)
+        For now, it only calculates a delay in simulation, corresponding to previous measurements"""
+        return round(get_random_values(self.env.delays['VALIDATE_TX'])[0], 2)

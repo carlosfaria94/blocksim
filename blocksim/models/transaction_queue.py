@@ -3,22 +3,19 @@ from blocksim.utils import get_random_values
 
 
 class TransactionQueue():
-    def __init__(self, env, node):
+    def __init__(self, env, node, consensus):
         self.env = env
         self.node = node
+        self.consensus = consensus
         self.store = simpy.PriorityStore(env)
 
     def validate_tx(self, tx):
-        tx_validation_delay = round(get_random_values(
-            self.env.delays['VALIDATE_TX'])[0], 2)
+        # Calculates the delay to validate the tx
+        tx_validation_delay = self.consensus.validate_transaction()
         yield self.env.timeout(tx_validation_delay)
         self.store.put(tx)
-        print('{} at {}: Transaction {} added to the queue'
-              .format(
-                  self.node.address,
-                  self.env.now,
-                  tx.hash[:8]
-              ))
+        print(
+            f'{self.node.address} at {self.env.now}: Transaction {tx.hash[:8]} added to the queue')
 
     def put(self, tx):
         self.env.process(self.validate_tx(tx))
