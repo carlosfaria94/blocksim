@@ -9,6 +9,7 @@ from blocksim.models.consensus import Consensus
 from blocksim.models.db import BaseDB
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.ethereum.config import default_config
+from blocksim.utils import time
 
 
 class ETHNode(Node):
@@ -51,7 +52,7 @@ class ETHNode(Node):
             raise RuntimeError(f'Node {self.location} is not a miner')
 
         print(
-            f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
+            f'{self.address} at {time(self.env)}: Start mining process, waiting for transactions.')
 
         gas_limit_per_block = 63000 or self.config['GENESIS_GAS_LIMIT']
         txs_intrinsic_gas = 0
@@ -66,7 +67,7 @@ class ETHNode(Node):
         candidate_block = self._build_candidate_block(
             pending_txs, gas_limit_per_block, txs_intrinsic_gas)
         print(
-            f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
+            f'{self.address} at {time(self.env)}: New candidate block created {candidate_block.header.hash[:8]}')
 
         # Mine the block by simulating the resolution of a puzzle
         self.mining_current_block = self.env.process(
@@ -85,7 +86,7 @@ class ETHNode(Node):
                 solved_puzzle = bool(random.getrandbits(1))
                 if solved_puzzle is True:
                     print(
-                        f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
+                        f'{self.address} at {time(self.env)}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
 
                     # We need to broadcast the new candidate block across the network
                     self.broadcast_new_blocks([candidate_block], None)
@@ -95,12 +96,12 @@ class ETHNode(Node):
                     break
                 else:
                     print(
-                        f'{self.address} at {self.env.now}: Cannot solve cryptographic puzzle for the candidate block. Try again.')
+                        f'{self.address} at {time(self.env)}: Cannot solve cryptographic puzzle for the candidate block. Try again.')
         except simpy.Interrupt as i:
             # The mining of the current block has interrupted
             # Probably a new block has founded, forget this block, and start mining a new one.
             print(
-                f'{self.address} at {self.env.now}: Stop mining current candidate block and start mining a new one')
+                f'{self.address} at {time(self.env)}: Stop mining current candidate block and start mining a new one')
             self._init_mining()
 
     def _build_candidate_block(self, pending_txs, gas_limit_per_block, txs_intrinsic_gas):
@@ -131,13 +132,13 @@ class ETHNode(Node):
         This message should be sent after the initial handshake and prior to any ethereum related messages."""
         status_msg = self.network_message.status()
         print(
-            f'{self.address} at {self.env.now}: Status message sent to {destination_address}')
+            f'{self.address} at {time(self.env)}: Status message sent to {destination_address}')
         self.env.process(
             self.send(destination_address, None, status_msg))
 
     def _receive_status(self, envelope):
         print(
-            f'{self.address} at {self.env.now}: Receive status from {envelope.origin.address}')
+            f'{self.address} at {time(self.env)}: Receive status from {envelope.origin.address}')
         node = self.active_sessions.get(envelope.origin.address)
         node['status'] = envelope.msg
         self.active_sessions[envelope.origin.address] = node
@@ -154,7 +155,7 @@ class ETHNode(Node):
                 # Checks if the transaction was previous sent
                 if any({tx.hash} & node.get('knownTxs')):
                     print(
-                        f'{self.address} at {self.env.now}: Transaction {tx.hash[:8]} was already sent to {node_address}')
+                        f'{self.address} at {time(self.env)}: Transaction {tx.hash[:8]} was already sent to {node_address}')
                     transactions.remove(tx)
                 else:
                     self._mark_transaction(tx.hash, node_address)
@@ -162,7 +163,7 @@ class ETHNode(Node):
         # Only send if it has transactions
         if transactions:
             print(
-                f'{self.address} at {self.env.now}: {len(transactions)} transactions ready to be sent')
+                f'{self.address} at {time(self.env)}: {len(transactions)} transactions ready to be sent')
             transactions_msg = self.network_message.transactions(transactions)
 
             # TODO: We need first know the status of the other node and then broadcast
@@ -198,7 +199,7 @@ class ETHNode(Node):
             if self.mining_current_block and self.mining_current_block.is_alive:
                 self.mining_current_block.interrupt()
         new_blocks = envelope.msg['new_blocks']
-        print(f'{self.address} at {self.env.now}: New blocks received {new_blocks}')
+        print(f'{self.address} at {time(self.env)}: New blocks received {new_blocks}')
         # If the block is already known by a node, it does not need to request the block again
         block_numbers = []
         for block_hash, block_number in new_blocks.items():
@@ -243,15 +244,15 @@ class ETHNode(Node):
                 if self.chain.add_block(new_block):
                     del self.temp_headers[block_hash]
                     print(
-                        f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain  {new_block.header}')
+                        f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain  {new_block.header}')
         # TODO: Delete next lines. We need to have another way to see the final state of the chain for each node
         head = self.chain.head
         print(
-            f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
+            f'{self.address} at {time(self.env)}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
         for i in range(head.header.number):
             b = self.chain.get_block_by_number(i)
             print(
-                f'{self.address} at {self.env.now}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
+                f'{self.address} at {time(self.env)}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
 
     def broadcast_new_blocks(self, new_blocks, upload_rate):
         """Specify one or more new blocks which have appeared on the network.
@@ -282,7 +283,7 @@ class ETHNode(Node):
             block_headers.reverse()
 
         print(
-            f'{self.address} at {self.env.now}: {len(block_headers)} Block header(s) preapred to send')
+            f'{self.address} at {time(self.env)}: {len(block_headers)} Block header(s) preapred to send')
 
         block_headers_msg = self.network_message.block_headers(block_headers)
         self.env.process(
@@ -301,7 +302,7 @@ class ETHNode(Node):
             block_bodies[block.header.hash] = block.transactions
 
         print(
-            f'{self.address} at {self.env.now}: {len(block_bodies)} Block bodies(s) preapred to send')
+            f'{self.address} at {time(self.env)}: {len(block_bodies)} Block bodies(s) preapred to send')
 
         block_bodies_msg = self.network_message.block_bodies(block_bodies)
         self.env.process(

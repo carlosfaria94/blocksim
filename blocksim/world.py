@@ -30,8 +30,8 @@ class SimulationWorld:
                  initial_time: int,
                  blockchain: str,
                  measured_latency: str,
-                 measured_download_bandwidth: str,
-                 measured_upload_bandwidth: str,
+                 measured_throughput_received: str,
+                 measured_throughput_sent: str,
                  measured_delays: str):
         if isinstance(sim_duration, int) is False:
             raise TypeError(
@@ -47,14 +47,13 @@ class SimulationWorld:
         self._initial_time = initial_time
         self._blockchain = blockchain
         self._measured_latency = measured_latency
-        self._measured_download_bandwidth = measured_download_bandwidth
-        self._measured_upload_bandwidth = measured_upload_bandwidth
+        self._measured_throughput_received = measured_throughput_received
+        self._measured_throughput_sent = measured_throughput_sent
         # Set the SimPy Environment
         self._env = simpy.Environment(initial_time=self._initial_time)
         self._set_delays()
         self._set_latencies()
-        self._set_download_bandwidths()
-        self._set_upload_bandwidths()
+        self._set_throughputs()
 
     @property
     def blockchain(self):
@@ -88,25 +87,23 @@ class SimulationWorld:
         self._locations = list(data['locations'])
         self._env.delays.update(dict(LATENCIES=data['locations']))
 
-    def _set_download_bandwidths(self):
-        """Reads the file with the download bandwidths measurements taken"""
-        data = self._read_json_file(self._measured_download_bandwidth)
-        locations = list(data['locations'])
-        if locations == self._locations:
-            self._env.delays.update(dict(DOWNLOAD_BANDWIDTH=data['locations']))
-        else:
+    def _set_throughputs(self):
+        """Reads the measured throughputs and pass it to the environment variable to be
+        used during the simulation"""
+        throughput_received = self._read_json_file(
+            self._measured_throughput_received)
+        throughput_sent = self._read_json_file(self._measured_throughput_sent)
+        # Check if all locations exist
+        locations_rcvd = list(throughput_received['locations'])
+        locations_sent = list(throughput_sent['locations'])
+        if locations_rcvd != self.locations or locations_sent != self.locations:
             raise RuntimeError(
-                "The locations in latencies measurements are not equal in download bandwidth measurements")
-
-    def _set_upload_bandwidths(self):
-        """Reads the file with the upload bandwidths measurements taken"""
-        data = self._read_json_file(self._measured_upload_bandwidth)
-        locations = list(data['locations'])
-        if locations == self._locations:
-            self._env.delays.update(dict(UPLOAD_BANDWIDTH=data['locations']))
-        else:
-            raise RuntimeError(
-                "The locations in latencies measurements are not equal in upload bandwidth measurements")
+                "The locations in latencies measurements are not equal in throughputs measurements")
+        # Pass the throughputs to the environment variable
+        self._env.delays.update(dict(
+            THROUGHPUT_RECEIVED=throughput_received['locations'],
+            THROUGHPUT_SENT=throughput_sent['locations']
+        ))
 
     def _validate_distribution(self, *distributions: dict):
         for distribution in distributions:

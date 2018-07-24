@@ -1,3 +1,4 @@
+import time
 from blocksim.world import SimulationWorld
 from blocksim.node_factory import NodeFactory
 from blocksim.models.network import Network
@@ -5,14 +6,17 @@ from blocksim.models.transaction import Transaction
 
 
 def set_simulation():
+    now = int(time.time())
+    # TODO: Create a func to user input only days and converts to seconds
+    duration = now + 100000
     world = SimulationWorld(
-        100000,
-        0,
+        duration,
+        now,
         'bitcoin',
-        'measures-input/latency.json',
-        'measures-input/download-bandwidth.json',
-        'measures-input/upload-bandwidth.json',
-        'measures-input/delays.json')
+        'input-parameters/latency.json',
+        'input-parameters/throughput-received.json',
+        'input-parameters/throughput-sent.json',
+        'input-parameters/delays.json')
     run_model(world)
 
 
@@ -22,18 +26,18 @@ def run_model(world):
 
     miners = {
         'Ohio': {
-            'how_many': 1
+            'how_many': 2
         },
         'Ireland': {
-            'how_many': 2
+            'how_many': 1
         }
     }
     non_miners = {
         'Ohio': {
-            'how_many': 1
+            'how_many': 2
         },
         'Ireland': {
-            'how_many': 2
+            'how_many': 1
         }
     }
     factory = NodeFactory(world, network)

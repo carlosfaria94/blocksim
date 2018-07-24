@@ -1,5 +1,5 @@
 import simpy
-from blocksim.utils import get_random_values
+from blocksim.utils import time
 
 
 class TransactionQueue():
@@ -15,7 +15,7 @@ class TransactionQueue():
         yield self.env.timeout(tx_validation_delay)
         self.store.put(tx)
         print(
-            f'{self.node.address} at {self.env.now}: Transaction {tx.hash[:8]} added to the queue')
+            f'{self.node.address} at {time(self.env)}: Transaction {tx.hash[:8]} added to the queue')
 
     def put(self, tx):
         self.env.process(self.validate_tx(tx))

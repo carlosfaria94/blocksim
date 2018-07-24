@@ -1,5 +1,6 @@
 import random
 import itertools
+from blocksim.utils import time
 
 
 class Chain:
@@ -107,14 +108,14 @@ class Chain:
         # Is the block being added to the heap?
         if block.header.prevhash == self._head_hash:
             print(
-                f'{self.node.address} at {self.env.now}: Adding block #{block.header.number} ({block.header.hash[:8]}) to the head', )
+                f'{self.node.address} at {time(self.env)}: Adding block #{block.header.number} ({block.header.hash[:8]}) to the head', )
             self.consensus.apply_block(self.env, 2)
             self.db.put(f'block:{block.header.number}', block.header.hash)
             self._head_hash = block.header.hash
         # Or is the block being added to a chain that is not currently the head?
         elif block.header.prevhash in self.db:
             print(
-                f'{self.node.address} at {self.env.now}: Receiving block #{block.header.number} ({block.header.hash[:8]}) not on head ({self._head_hash[:8]}), adding to secondary chain')
+                f'{self.node.address} at {time(self.env)}: Receiving block #{block.header.number} ({block.header.hash[:8]}) not on head ({self._head_hash[:8]}), adding to secondary chain')
             self.consensus.apply_block(self.env, 2)
             block_td = self.get_pow_difficulty(block)
             # If the block should be the new head, replace the head
@@ -140,7 +141,7 @@ class Chain:
                 # number)
                 for i in itertools.count(replace_from):
                     print(
-                        f'{self.node.address} at {self.env.now}: Rewriting height {i}')
+                        f'{self.node.address} at {time(self.env)}: Rewriting height {i}')
                     key = f'block:{i}'
                     # Delete data for old blocks
                     orig_at_height = self.db.get(
@@ -148,14 +149,14 @@ class Chain:
                     if orig_at_height:
                         orig_block_at_height = self.get_block(orig_at_height)
                         print(
-                            f'{self.node.address} at {self.env.now}: {orig_block_at_height.header.hash} no longer in main chain')
+                            f'{self.node.address} at {time(self.env)}: {orig_block_at_height.header.hash} no longer in main chain')
                         # Delete from block index
                         self.db.delete(key)
                     # Add data for new blocks
                     if i in new_chain:
                         new_block_at_height = new_chain[i]
                         print(
-                            f'{self.node.address} at {self.env.now}: {new_block_at_height.header.hash} now in main chain')
+                            f'{self.node.address} at {time(self.env)}: {new_block_at_height.header.hash} now in main chain')
                         # Add to block index
                         self.db.put(key, new_block_at_height.header.hash)
                     if i not in new_chain and not orig_at_height:
@@ -167,7 +168,7 @@ class Chain:
                 self.parent_queue[block.header.prevhash] = []
             self.parent_queue[block.header.prevhash].append(block)
             print(
-                f'{self.node.address} at {self.env.now}: Got block #{block.header.number} ({block.header.hash[:8]}) with prevhash {block.header.prevhash[:8]}, parent not found. Delaying for now')
+                f'{self.node.address} at {time(self.env)}: Got block #{block.header.number} ({block.header.hash[:8]}) with prevhash {block.header.prevhash[:8]}, parent not found. Delaying for now')
             return False
 
         self.add_child(block)

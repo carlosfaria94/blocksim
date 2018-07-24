@@ -1,7 +1,8 @@
 from collections import namedtuple
 from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
-from blocksim.utils import get_transmission_delay
+from blocksim.utils import get_received_delay, get_sent_delay
+from blocksim.utils import time
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
 
@@ -63,11 +64,11 @@ class Node:
         origin_node = connection.origin_node
         destination_node = connection.destination_node
         # TODO: Message size? Should be the TCP handshake?
-        upload_transmission_delay = get_transmission_delay(
-            self.env, 1, False, origin_node.location, destination_node.location)
+        upload_transmission_delay = get_sent_delay(
+            self.env, 1, origin_node.location, destination_node.location)
         yield self.env.timeout(upload_transmission_delay)
         # print(
-        #    f'{self.address} at {self.env.now}: Connection established with {node.address}')
+        #    f'{self.address} at {time(self.env)}: Connection established with {node.address}')
         # Start listening for messages from the destination node
         self.env.process(destination_node.listening_node(connection))
 
@@ -95,19 +96,19 @@ class Node:
 
     def _read_envelope(self, envelope):
         print(
-            f'{self.address} at {self.env.now}: Receive a message (ID: {envelope.msg["id"]}) created at {envelope.timestamp} from {envelope.origin.address}')
+            f'{self.address} at {time(self.env)}: Receive a message (ID: {envelope.msg["id"]}) created at {envelope.timestamp} from {envelope.origin.address}')
 
     def listening_node(self, connection):
         # print('{} at {}: Listening for connections from the {}'
-        #      .format(self.address, self.env.now, connection.origin_node.address))
+        #      .format(self.address, time(self.env), connection.origin_node.address))
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
             origin_loc = envelope.origin.location
             dest_loc = envelope.destination.location
             message_size = envelope.msg['size']
-            trans_delay_download = get_transmission_delay(
-                self.env, message_size, True, origin_loc, dest_loc)
+            trans_delay_download = get_received_delay(
+                self.env, message_size, origin_loc, dest_loc)
             yield self.env.timeout(trans_delay_download)
             self._read_envelope(envelope)
 
@@ -128,10 +129,10 @@ class Node:
         origin_node = active_connection.origin_node
         destination_node = active_connection.destination_node
         if upload_transmission_delay is None:
-            upload_transmission_delay = get_transmission_delay(
-                self.env, msg['size'], False, origin_node.location, destination_node.location)
+            upload_transmission_delay = get_sent_delay(
+                self.env, msg['size'], origin_node.location, destination_node.location)
         yield self.env.timeout(upload_transmission_delay)
-        envelope = Envelope(msg, self.env.now, destination_node, origin_node)
+        envelope = Envelope(msg, time(self.env), destination_node, origin_node)
         active_connection.put(envelope)
 
     def broadcast(self, upload_transmission_delay, msg):
@@ -147,9 +148,9 @@ class Node:
             origin_node = connection.origin_node
             destination_node = connection.destination_node
             if upload_transmission_delay is None:
-                upload_transmission_delay = get_transmission_delay(
-                    self.env, msg['size'], False, origin_node.location, destination_node.location)
+                upload_transmission_delay = get_sent_delay(
+                    self.env, msg['size'], origin_node.location, destination_node.location)
             yield self.env.timeout(upload_transmission_delay)
-            envelope = Envelope(msg, self.env.now,
+            envelope = Envelope(msg, time(self.env),
                                 destination_node, origin_node)
             connection.put(envelope)

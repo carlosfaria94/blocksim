@@ -10,6 +10,7 @@ from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
 from blocksim.models.config import default_config
 from blocksim.utils import get_random_values
+from blocksim.utils import time
 
 
 class BTCNode(Node):
@@ -52,7 +53,7 @@ class BTCNode(Node):
             raise RuntimeError(f'Node {self.location} is not a miner')
 
         print(
-            f'{self.address} at {self.env.now}: Start mining process, waiting for transactions.')
+            f'{self.address} at {time(self.env)}: Start mining process, waiting for transactions.')
 
         block_size = self.config['BLOCK_SIZE_LIMIT']
         txs_size = 0
@@ -65,7 +66,7 @@ class BTCNode(Node):
         # Build the candidate block
         candidate_block = self._build_candidate_block(pending_txs)
         print(
-            f'{self.address} at {self.env.now}: New candidate block created {candidate_block.header.hash[:8]}')
+            f'{self.address} at {time(self.env)}: New candidate block created {candidate_block.header.hash[:8]}')
 
         # Mine the block by simulating the resolution of a puzzle
         self.mining_current_block = self.env.process(
@@ -84,7 +85,7 @@ class BTCNode(Node):
                 solved_puzzle = bool(random.getrandbits(1))
                 if solved_puzzle is True:
                     print(
-                        f'{self.address} at {self.env.now}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
+                        f'{self.address} at {time(self.env)}: Solved the cryptographic puzzle for the candidate block {candidate_block.header.hash[:8]}')
 
                     # We need to broadcast the new candidate block across the network
                     self.broadcast_new_blocks([candidate_block])
@@ -94,12 +95,12 @@ class BTCNode(Node):
                     break
                 else:
                     print(
-                        f'{self.address} at {self.env.now}: Cannot solve cryptographic puzzle for the candidate block. Try again.')
+                        f'{self.address} at {time(self.env)}: Cannot solve cryptographic puzzle for the candidate block. Try again.')
         except simpy.Interrupt as i:
             # The mining of the current block has interrupted
             # Probably a new block has founded, forget this block, and start mining a new one.
             print(
-                f'{self.address} at {self.env.now}: Stop mining current candidate block and start mining a new one')
+                f'{self.address} at {time(self.env)}: Stop mining current candidate block and start mining a new one')
             self._init_mining()
 
     def _build_candidate_block(self, pending_txs):
@@ -159,7 +160,7 @@ class BTCNode(Node):
                 # Checks if the transaction was previous sent
                 if any({tx.hash} & node.get('knownTxs')):
                     print(
-                        f'{self.address} at {self.env.now}: Transaction {tx.hash[:8]} was already sent to {node_address}')
+                        f'{self.address} at {time(self.env)}: Transaction {tx.hash[:8]} was already sent to {node_address}')
                 else:
                     # Calculates the delay to validate the tx
                     tx_validation_delay = self.consensus.validate_transaction()
@@ -169,7 +170,7 @@ class BTCNode(Node):
         # Only send if it has transactions hashes
         if transactions_hashes:
             print(
-                f'{self.address} at {self.env.now}: {len(transactions_hashes)} transaction(s) ready to be announced')
+                f'{self.address} at {time(self.env)}: {len(transactions_hashes)} transaction(s) ready to be announced')
             transactions_msg = self.network_message.inv(
                 transactions_hashes, 'tx')
             self.env.process(self.broadcast(None, transactions_msg))
@@ -184,7 +185,7 @@ class BTCNode(Node):
                 tx = self.temp_txs[tx_hash]
                 del self.temp_txs[tx_hash]
                 print(
-                    f'{self.address} at {self.env.now}: Full transaction {tx.hash[:8]} preapred to send')
+                    f'{self.address} at {time(self.env)}: Full transaction {tx.hash[:8]} preapred to send')
                 tx_msg = self.network_message.tx(tx)
                 self.env.process(
                     self.send(envelope.origin.address, None, tx_msg))
@@ -230,7 +231,7 @@ class BTCNode(Node):
                 self.mining_current_block.interrupt()
         new_blocks_hashes = envelope.msg.get('hashes')
         print(
-            f'{self.address} at {self.env.now}: {len(new_blocks_hashes)} new blocks announced by {envelope.origin.address}')
+            f'{self.address} at {time(self.env)}: {len(new_blocks_hashes)} new blocks announced by {envelope.origin.address}')
         get_data_msg = self.network_message.get_data(
             new_blocks_hashes, 'block')
         self.env.process(
@@ -243,19 +244,19 @@ class BTCNode(Node):
         is_added = self.chain.add_block(block)
         if is_added:
             print(
-                f'{self.address} at {self.env.now}: Block assembled and added to the tip of the chain {block.header}')
+                f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain {block.header}')
         else:
             print(
-                f'{self.address} at {self.env.now}: Block NOT added to the chain {block.header}')
+                f'{self.address} at {time(self.env)}: Block NOT added to the chain {block.header}')
 
         # TODO: Delete next lines. We need to have another way to see the final state of the chain for each node
         head = self.chain.head
         print(
-            f'{self.address} at {self.env.now}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
+            f'{self.address} at {time(self.env)}: head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
         for i in range(head.header.number):
             b = self.chain.get_block_by_number(i)
             print(
-                f'{self.address} at {self.env.now}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
+                f'{self.address} at {time(self.env)}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
 
     def _send_full_blocks(self, envelope):
         """Send a full block (https://bitcoin.org/en/developer-reference#block) for any node that
@@ -266,6 +267,6 @@ class BTCNode(Node):
         for block_hash in envelope.msg['hashes']:
             block = self.chain.get_block(block_hash)
             print(
-                f'{self.address} at {self.env.now}: Block {block.header.hash[:8]} preapred to send to {origin}')
+                f'{self.address} at {time(self.env)}: Block {block.header.hash[:8]} preapred to send to {origin}')
             block_msg = self.network_message.block(block)
             self.env.process(self.send(origin, None, block_msg))

@@ -1,4 +1,5 @@
 import binascii
+import datetime
 from ast import literal_eval as make_tuple
 import scipy.stats
 try:
@@ -13,30 +14,50 @@ except ImportError:
         return _sha3.keccak_256(value).digest()
 
 
-def get_transmission_delay(env, message_size: float, isDownload: bool, origin: str, destination: str, n=1):
+def get_received_delay(env, message_size: float, origin: str, destination: str, n=1):
     """
-    message_size: float message size in megabits (MB)
+    It calculates and returns a delay when receiving/downloading a message with a certain size (`message_size`)
 
+    :param message_size: message size in megabytes (MB)
+    :param origin: the location of the origin node
+    :param destination: the location of the destination node
+    :param n: the number of delays returned
+
+    If `n` is 1 it returns a `float`, if `n > 1` returns an array of `n` floats.
     """
-    if isDownload is True:
-        location = env.delays['DOWNLOAD_BANDWIDTH'][origin][destination]
+    distribution = env.delays['THROUGHPUT_RECEIVED'][origin][destination]
+    return _calc_distribution(distribution, message_size, 1)
+
+
+def get_sent_delay(env, message_size: float, origin: str, destination: str, n=1):
+    """
+    It calculates and returns a delay when sending/uploading a message with a certain size (`message_size`)
+
+    :param message_size: message size in megabytes (MB)
+    :param origin: the location of the origin node
+    :param destination: the location of the destination node
+    :param n: the number of delays returned
+
+    If `n` is 1 it returns a `float`, if `n > 1` returns an array of `n` floats.
+    """
+    distribution = env.delays['THROUGHPUT_SENT'][origin][destination]
+    return _calc_distribution(distribution, message_size, 1)
+
+
+def _calc_distribution(distribution: dict, message_size: float, n):
+    rand_throughputs = get_random_values(distribution, n)
+    delays = []
+    for throughput in rand_throughputs:
+        delay = (message_size * 8) / throughput
+        delays.append(delay)
+    if len(delays) == 1:
+        return round(delays[0], 3)
     else:
-        location = env.delays['UPLOAD_BANDWIDTH'][origin][destination]
-    dist = getattr(scipy.stats, location['name'])
-    param = make_tuple(location['parameters'])
-    rand_bandwidths = dist.rvs(
-        *param[:-2], loc=param[-2], scale=param[-1], size=n)
-    throughputs = []
-    for bandwidth in rand_bandwidths:
-        # if effective <= 0 or effective >= 1:
-        #    raise RuntimeError(
-        #        'Invalid effective throughput. It needs to be in the interval ]0, 1[')
-        throughput = (message_size * 8) / bandwidth
-        throughputs.append(throughput)
-    if len(throughputs) == 1:
-        return round(throughputs[0], 3)
-    else:
-        return throughputs
+        return delays
+
+
+def time(env):
+    return datetime.datetime.utcfromtimestamp(env.now).strftime('%m-%d %H:%M:%S')
 
 
 def get_random_values(distribution: dict, n=1):
