@@ -29,6 +29,7 @@ class NodeFactory:
                               self._network,
                               miner_location,
                               node_address,
+                              10000,
                               True)
                 miners_list.append(new)
         # Create the non-miners nodes
@@ -40,14 +41,11 @@ class NodeFactory:
                 new = BTCNode(self._world.env,
                               self._network,
                               miner_location,
-                              node_address,
-                              False)
+                              node_address)
                 non_miners_list.append(new)
         # Fully connect all the nodes
         nodes_list = miners_list + non_miners_list
-        print(f'Creating {len(nodes_list)} bitcoin nodes')
-        for node in nodes_list:
-            node.connect(nodes_list)
+        print(f'NodeFactory: Created {len(nodes_list)} bitcoin nodes')
         return nodes_list
 
     def create_ethereum_nodes(self, miners, non_miners):
@@ -78,10 +76,7 @@ class NodeFactory:
                 non_miners_list.append(new)
         # Fully connect all the nodes
         nodes_list = miners_list + non_miners_list
-        print(f'Creating {len(nodes_list)} ethereum nodes')
-        for node in nodes_list:
-            print(f'Connecting {node.address} with:')
-            node.connect(nodes_list)
+        print(f'NodeFactory: Created {len(nodes_list)} ethereum nodes')
         return nodes_list
 
     def _check_location(self, miners, non_miners):

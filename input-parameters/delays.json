@@ -6,5 +6,9 @@
   "block_validation": {
     "name": "lognorm",
     "parameters": "(0.7615979985548762, 1, 2)"
+  },
+  "time_between_blocks": {
+    "name": "lognorm",
+    "parameters": "(0.7615979985548762, 600, 2)"
   }
 }

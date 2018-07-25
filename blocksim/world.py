@@ -78,7 +78,8 @@ class SimulationWorld:
             self._measured_delays['block_validation'])
         self._env.delays = dict(
             VALIDATE_TX=self._measured_delays['tx_validation'],
-            VALIDATE_BLOCK=self._measured_delays['block_validation']
+            VALIDATE_BLOCK=self._measured_delays['block_validation'],
+            TIME_BETWEEN_BLOCKS=self._measured_delays['time_between_blocks']
         )
 
     def _set_latencies(self):

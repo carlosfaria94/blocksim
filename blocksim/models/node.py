@@ -38,9 +38,9 @@ class Node:
         self.address = address
         self.chain = chain
         self.active_sessions = {}
+        self.connecting = None
         # Join the node to the network
         self.network.add_node(self)
-        self.connecting = None
 
     def connect(self, nodes: list):
         """Simulate an acknowledgement phase with given nodes.
@@ -112,7 +112,7 @@ class Node:
             yield self.env.timeout(trans_delay_download)
             self._read_envelope(envelope)
 
-    def send(self, destination_address: str, upload_transmission_delay, msg):
+    def send(self, destination_address: str, msg):
         node = self.active_sessions.get(destination_address)
         active_connection = node.get('connection')
         if active_connection is None and msg['id'] == 0:
@@ -128,14 +128,13 @@ class Node:
 
         origin_node = active_connection.origin_node
         destination_node = active_connection.destination_node
-        if upload_transmission_delay is None:
-            upload_transmission_delay = get_sent_delay(
-                self.env, msg['size'], origin_node.location, destination_node.location)
+        upload_transmission_delay = get_sent_delay(
+            self.env, msg['size'], origin_node.location, destination_node.location)
         yield self.env.timeout(upload_transmission_delay)
         envelope = Envelope(msg, time(self.env), destination_node, origin_node)
         active_connection.put(envelope)
 
-    def broadcast(self, upload_transmission_delay, msg):
+    def broadcast(self, msg):
         """Broadcast a message to all nodes with an active session"""
         for node_address, node in self.active_sessions.items():
             connection = node.get('connection')
@@ -147,9 +146,8 @@ class Node:
             # yield self.env.timeout(3)
             origin_node = connection.origin_node
             destination_node = connection.destination_node
-            if upload_transmission_delay is None:
-                upload_transmission_delay = get_sent_delay(
-                    self.env, msg['size'], origin_node.location, destination_node.location)
+            upload_transmission_delay = get_sent_delay(
+                self.env, msg['size'], origin_node.location, destination_node.location)
             yield self.env.timeout(upload_transmission_delay)
             envelope = Envelope(msg, time(self.env),
                                 destination_node, origin_node)

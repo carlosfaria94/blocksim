@@ -104,7 +104,8 @@ class Chain:
 
     def add_block(self, block):
         """Call upon receiving a block"""
-        self.consensus.validate_block(self.env, 3)
+        # TODO: The validation needs to occur outside of add_block
+        # self.consensus.validate_block(self.env, 3)
         # Is the block being added to the heap?
         if block.header.prevhash == self._head_hash:
             print(

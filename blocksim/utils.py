@@ -1,5 +1,6 @@
 import binascii
 import datetime
+import random
 from ast import literal_eval as make_tuple
 import scipy.stats
 try:
@@ -66,6 +67,19 @@ def get_random_values(distribution: dict, n=1):
     dist = getattr(scipy.stats, distribution['name'])
     param = make_tuple(distribution['parameters'])
     return dist.rvs(*param[:-2], loc=param[-2], scale=param[-1], size=n)
+
+
+def random_pick(some_list, probabilities):
+    assert len(some_list) == len(probabilities)
+    assert 0 <= min(probabilities) and max(probabilities) <= 1
+    assert abs(sum(probabilities)-1.0) < 1.0e-5
+    x = random.uniform(0, 1)
+    cumulative_probability = 0.0
+    for item, item_probability in zip(some_list, probabilities):
+        cumulative_probability += item_probability
+        if x < cumulative_probability:
+            break
+    return item
 
 
 def decode_hex(s):

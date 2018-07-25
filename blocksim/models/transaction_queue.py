@@ -21,4 +21,5 @@ class TransactionQueue():
         self.env.process(self.validate_tx(tx))
 
     def get(self):
+        # TODO: A delay to retrieve a transaction from the Queue
         return self.store.get()

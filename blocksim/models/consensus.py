@@ -19,10 +19,9 @@ class Consensus:
     def calc_difficulty(self, parent, timestamp):
         """Difficulty adjustment algorithm for the simulator.
         A block that is created in less time, have more difficulty associated"""
-        offset = parent.header.difficulty // self.config['BLOCK_DIFF_FACTOR']
+        # offset = parent.header.difficulty // self.config['BLOCK_DIFF_FACTOR']
         timestamp_diff = timestamp - parent.header.timestamp
-        new_diff = int(parent.header.difficulty + offset - timestamp_diff)
-        return new_diff
+        return int(parent.header.difficulty + timestamp_diff)
 
     def apply_block(self, duration, state=None, block=None):
         """ Simulates the block-level state transition function.
