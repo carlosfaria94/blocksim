@@ -2,20 +2,48 @@
   "locations": {
     "Tokyo": {
       "Tokyo": {
-        "latency": true
+        "name": "invgamma",
+        "parameters":
+          "(11.104508341331055, 0.3371934865734555, 2.0258998705983737)"
       },
-      "Ireland": {},
-      "Ohio": {}
+      "Ireland": {
+        "name": "norm",
+        "parameters": "(222.0275, 0.25834811785650774)"
+      },
+      "Ohio": {
+        "name": "norm",
+        "parameters": "(156.00904977375566, 0.09469886668079797)"
+      }
     },
     "Ireland": {
-      "Tokyo": {},
-      "Ireland": {},
-      "Ohio": {}
+      "Tokyo": {
+        "name": "norm",
+        "parameters": "(222.0275, 0.25834811785650774)"
+      },
+      "Ireland": {
+        "name": "invgamma",
+        "parameters":
+          "(6.4360455224301525, 0.8312748033308526, 1.086191852963273)"
+      },
+      "Ohio": {
+        "name": "norm",
+        "parameters": "(84.6995, 0.19583092197097127)"
+      }
     },
     "Ohio": {
-      "Tokyo": {},
-      "Ireland": {},
-      "Ohio": {}
+      "Tokyo": {
+        "name": "norm",
+        "parameters": "(156.00904977375566, 0.09469886668079797)"
+      },
+      "Ireland": {
+        "name": "norm",
+        "parameters": "(84.6995, 0.19583092197097127)"
+      },
+      "Ohio": {
+        "name": "invgamma",
+        "parameters":
+          "(5.540906482531864, 0.33330564880631053, 0.9872493535175394)"
+      }
     }
   }
 }

@@ -1,10 +1,5 @@
-import scipy
-import scipy.stats
-import matplotlib
-import matplotlib.pyplot as plt
-import re
-from scipy import array
-import numpy as np
+from matplotlib import pyplot as plt
+from scipy import array, stats
 
 
 class Distribution(object):
@@ -25,12 +20,12 @@ class Distribution(object):
         self.dist_results = []
         self.params = {}
         for dist_name in self.dist_names:
-            dist = getattr(scipy.stats, dist_name)
+            dist = getattr(stats, dist_name)
             param = dist.fit(y)
 
             self.params[dist_name] = param
             # Applying the Kolmogorov-Smirnov test
-            D, p = scipy.stats.kstest(y, dist_name, args=param)
+            D, p = stats.kstest(y, dist_name, args=param)
             self.dist_results.append((dist_name, p))
 
         print('Kolmogorov-Smirnov test', self.dist_results)
@@ -53,7 +48,7 @@ class Distribution(object):
             dist_name = self.DistributionName
             param = self.Param
             # initiate the scipy distribution
-            dist = getattr(scipy.stats, dist_name)
+            dist = getattr(stats, dist_name)
             return dist.rvs(*param[:-2], loc=param[-2], scale=param[-1], size=n)
         else:
             raise ValueError('Must first run the Fit method.')
@@ -66,70 +61,7 @@ class Distribution(object):
         plt.show()
 
 
-def get_pings():
-    pings = []
-    with open("Ohio-ping-Ireland-jun-22.txt") as f:
-        for line in f:
-            for ping in re.findall(r'time=\d+.\d', line):
-                pings.append(float(ping[5:]))
-
-    _pings = array(pings)
-    print('Ping values:', _pings)
-    return _pings
-
-
-x = array([324.785,
-           581.964,
-           333.765,
-           386.399,
-           332.214,
-           324.696,
-           383.95,
-           579.554,
-           374.843,
-           597.77,
-           497.291,
-           504.971,
-           504.081,
-           374.984,
-           388.798,
-           321.256,
-           488.378,
-           407.856,
-           458.865,
-           504.143,
-           466.422,
-           514.7,
-           521.283,
-           507.339,
-           336.045,
-           581.892,
-           323.522,
-           579.81,
-           332.137,
-           385.018,
-           330.976,
-           323.513,
-           382.507,
-           577.121,
-           373.41,
-           595.506,
-           495.438,
-           503.449,
-           502.49,
-           373.556,
-           387.354,
-           319.981,
-           486.577,
-           406.375,
-           457.022,
-           502.184,
-           464.716,
-           512.61,
-           519.362,
-           505.257,
-           334.822,
-           579.542])
+x = array([1, 2, 3, 4])
 dst = Distribution()
 dst.Fit(x)
 print(dst.Random(100))
