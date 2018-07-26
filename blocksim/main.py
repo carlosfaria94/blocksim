@@ -21,7 +21,7 @@ def set_simulation():
         'input-parameters/latency.json',
         'input-parameters/throughput-received.json',
         'input-parameters/throughput-sent.json',
-        'input-parameters/delays.json')
+        'input-parameters/delays-bitcoin.json')
     run_model(world)
 
 
