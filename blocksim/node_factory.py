@@ -1,3 +1,5 @@
+from ast import literal_eval as make_tuple
+from random import randint
 from blocksim.models.bitcoin.node import BTCNode
 from blocksim.models.ethereum.node import ETHNode
 
@@ -25,11 +27,16 @@ class NodeFactory:
             for i in range(_miners['how_many']):
                 node_id += 1
                 node_address = f'{miner_location.lower()}-{node_id}'
+                mega_hashrate_range = make_tuple(
+                    _miners['mega_hashrate_range'])
+                # Choose a random value on MH/s range and convert to H/s
+                hashrate = randint(
+                    mega_hashrate_range[0], mega_hashrate_range[1])*10**6
                 new = BTCNode(self._world.env,
                               self._network,
                               miner_location,
                               node_address,
-                              10000,
+                              hashrate,
                               True)
                 miners_list.append(new)
         # Create the non-miners nodes
@@ -56,10 +63,16 @@ class NodeFactory:
             for i in range(_miners['how_many']):
                 node_id += 1
                 node_address = f'{miner_location.lower()}-{node_id}'
+                mega_hashrate_range = make_tuple(
+                    _miners['mega_hashrate_range'])
+                # Choose a random value on MH/s range and convert to H/s
+                hashrate = randint(
+                    mega_hashrate_range[0], mega_hashrate_range[1])*10**6
                 new = ETHNode(self._world.env,
                               self._network,
                               miner_location,
                               node_address,
+                              hashrate,
                               True)
                 miners_list.append(new)
         # Create the non-miners nodes

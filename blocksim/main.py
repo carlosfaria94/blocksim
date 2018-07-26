@@ -31,10 +31,12 @@ def run_model(world):
 
     miners = {
         'Ohio': {
-            'how_many': 2
+            'how_many': 2,
+            'mega_hashrate_range': "(20, 40)"
         },
         'Ireland': {
-            'how_many': 1
+            'how_many': 1,
+            'mega_hashrate_range': "(20, 40)"
         }
     }
     non_miners = {
