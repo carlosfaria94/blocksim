@@ -15,6 +15,17 @@ except ImportError:
         return _sha3.keccak_256(value).digest()
 
 
+def get_latency_delay(env, origin: str, destination: str, n=1):
+    distribution = env.delays['LATENCIES'][origin][destination]
+    # Convert latency in ms to seconds
+    latencies = [
+        latency/1000 for latency in get_random_values(distribution, n)]
+    if len(latencies) == 1:
+        return round(latencies[0], 4)
+    else:
+        return latencies
+
+
 def get_received_delay(env, message_size: float, origin: str, destination: str, n=1):
     """
     It calculates and returns a delay when receiving/downloading a message with a certain size (`message_size`)
@@ -27,7 +38,7 @@ def get_received_delay(env, message_size: float, origin: str, destination: str, 
     If `n` is 1 it returns a `float`, if `n > 1` returns an array of `n` floats.
     """
     distribution = env.delays['THROUGHPUT_RECEIVED'][origin][destination]
-    return _calc_distribution(distribution, message_size, 1)
+    return _calc_throughput(distribution, message_size, n)
 
 
 def get_sent_delay(env, message_size: float, origin: str, destination: str, n=1):
@@ -42,10 +53,10 @@ def get_sent_delay(env, message_size: float, origin: str, destination: str, n=1)
     If `n` is 1 it returns a `float`, if `n > 1` returns an array of `n` floats.
     """
     distribution = env.delays['THROUGHPUT_SENT'][origin][destination]
-    return _calc_distribution(distribution, message_size, 1)
+    return _calc_throughput(distribution, message_size, n)
 
 
-def _calc_distribution(distribution: dict, message_size: float, n):
+def _calc_throughput(distribution: dict, message_size: float, n):
     rand_throughputs = get_random_values(distribution, n)
     delays = []
     for throughput in rand_throughputs:

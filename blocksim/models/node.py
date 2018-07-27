@@ -1,7 +1,7 @@
 from collections import namedtuple
 from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
-from blocksim.utils import get_received_delay, get_sent_delay
+from blocksim.utils import get_received_delay, get_sent_delay, get_latency_delay
 from blocksim.utils import time
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
@@ -43,8 +43,8 @@ class Node:
         self.network.add_node(self)
 
     def connect(self, nodes: list):
-        """Simulate an acknowledgement phase with given nodes.
-        During simulation the nodes will have an active session."""
+        """Simulate an acknowledgement phase with given nodes. During simulation the nodes
+        will have an active session."""
         for node in nodes:
             # Ignore when a node is trying to connect to itself
             if node.address != self.address:
@@ -58,18 +58,17 @@ class Node:
                     self._connecting(node, connection))
 
     def _connecting(self, node, connection):
-        """Simulates the time needed to perform TCP handshake and acknowledgement phase"""
-        # TODO: Calculate a delay/timeout do simulate the TCP handshake + HELLO ACK protocol
-        # yield self.env.timeout(2)
+        """Simulates the time needed to perform TCP handshake and acknowledgement phase.
+        During the simulation we do not need to simulate it again.
+
+        We consider that a node communicate with his peer using an open connection/channel
+        during all the simulation."""
         origin_node = connection.origin_node
         destination_node = connection.destination_node
-        # TODO: Message size? Should be the TCP handshake?
-        upload_transmission_delay = get_sent_delay(
-            self.env, 1, origin_node.location, destination_node.location)
-        yield self.env.timeout(upload_transmission_delay)
-        # print(
-        #    f'{self.address} at {time(self.env)}: Connection established with {node.address}')
-        # Start listening for messages from the destination node
+        latency = get_latency_delay(
+            self.env, origin_node.location, destination_node.location)
+        tcp_handshake_delay = 3*latency
+        yield self.env.timeout(tcp_handshake_delay)
         self.env.process(destination_node.listening_node(connection))
 
     def _mark_block(self, block_hash: str, node_address: str):
@@ -99,17 +98,15 @@ class Node:
             f'{self.address} at {time(self.env)}: Receive a message (ID: {envelope.msg["id"]}) created at {envelope.timestamp} from {envelope.origin.address}')
 
     def listening_node(self, connection):
-        # print('{} at {}: Listening for connections from the {}'
-        #      .format(self.address, time(self.env), connection.origin_node.address))
         while True:
             # Get the messages from  connection
             envelope = yield connection.get()
             origin_loc = envelope.origin.location
             dest_loc = envelope.destination.location
             message_size = envelope.msg['size']
-            trans_delay_download = get_received_delay(
+            received_delay = get_received_delay(
                 self.env, message_size, origin_loc, dest_loc)
-            yield self.env.timeout(trans_delay_download)
+            yield self.env.timeout(received_delay)
             self._read_envelope(envelope)
 
     def send(self, destination_address: str, msg):
@@ -119,8 +116,6 @@ class Node:
             # We do not have an active connection with the destination because its a ACK msg
             destination_node = self.network.get_node(destination_address)
             active_connection = Connection(self.env, self, destination_node)
-            # TODO: Professor: Should I apply the delay for the TCP handshake?
-            # yield self.env.timeout(3)
         elif active_connection is None and msg['id'] != 0:
             # We do not have a connection and the message is not an ACK
             raise RuntimeError(
@@ -141,9 +136,6 @@ class Node:
             if connection is None:
                 raise RuntimeError(
                     f'Not possible to create a direct connection with the node {node_address}')
-
-            # TODO: Professor: Should I apply the delay for the TCP handshake?
-            # yield self.env.timeout(3)
             origin_node = connection.origin_node
             destination_node = connection.destination_node
             upload_transmission_delay = get_sent_delay(

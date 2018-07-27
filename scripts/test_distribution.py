@@ -61,8 +61,18 @@ class Distribution(object):
         plt.show()
 
 
-x = array([1, 2, 3, 4])
+def get_from_file(file_path):
+    times = []
+    with open(file_path) as f:
+        for t in f:
+            print(float(t))
+            times.append(float(t))
+    return array(times)
+
+
+x = get_from_file('')
+print(x)
 dst = Distribution()
 dst.Fit(x)
-print(dst.Random(100))
+print(dst.Random(10))
 dst.Plot(x)

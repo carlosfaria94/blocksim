@@ -1,6 +1,7 @@
 from random import randint
 import simpy
 from blocksim.utils import get_random_values, random_pick, time
+from blocksim.utils import get_latency_delay
 
 
 class Network:
@@ -64,8 +65,9 @@ class Connection:
         self.destination_node = destination_node
 
     def latency(self, envelope):
-        # TODO: Onde é aplicado o delay/RTT/ping? Ao calcular transmission_delay?
-        yield self.env.timeout(2)
+        latency_delay = get_latency_delay(
+            self.env, self.origin_node.location, self.destination_node.location)
+        yield self.env.timeout(latency_delay)
         self.store.put(envelope)
 
     def put(self, envelope):
