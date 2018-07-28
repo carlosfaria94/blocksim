@@ -2,7 +2,12 @@
   "blockchain": "bitcoin",
   "locations": ["Tokyo", "Ohio", "Ireland"],
   "bitcoin": {
-    "block_size_limit": 1
+    "block_size_limit": 1,
+    "number_transactions_per_block": {
+      "name": "beta",
+      "parameters":
+        "(3.4538110963361333, 4.240939683805738, 705.4815204696233, 2159.387403502942)"
+    }
   },
   "ethereum": {
     "block_gas_limit": 100000,

@@ -6,7 +6,7 @@ from blocksim.models.db import BaseDB
 from blocksim.models.consensus import Consensus
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
-from blocksim.utils import time
+from blocksim.utils import time, get_random_values
 
 
 class BTCNode(Node):
@@ -37,16 +37,26 @@ class BTCNode(Node):
                 env, self, self.consensus)
 
     def build_new_block(self):
-        """Builds a new candidate block and propagate it to the network"""
+        """Builds a new candidate block and propagate it to the network
+
+        We input in our model the block size limit, and also extrapolate the probability
+        distribution for the number of transactions per block, based on measurements from
+        the public network (https://www.blockchain.com/charts/n-transactions-per-block?timespan=2years).
+        If the block size limit is 1 MB, as we know in Bitcoin, we take from the probability
+        distribution the number of transactions, but if the user choose to simulate an
+        environment with a 2 MB block, we multiply by two the number of transactions.
+        With this we can see the performance in different block size limits."""
         if self.is_mining is False:
             raise RuntimeError(f'Node {self.location} is not a miner')
         block_size = self.env.config['bitcoin']['block_size_limit']
-        txs_size = 0
+        transactions_per_block_dist = self.env.config[
+            'bitcoin']['number_transactions_per_block']
+        transactions_per_block = int(
+            get_random_values(transactions_per_block_dist)[0])
         pending_txs = []
-        while txs_size < block_size:
+        for i in range(transactions_per_block * block_size):
             pending_tx = yield self.transaction_queue.get()
             pending_txs.append(pending_tx)
-            txs_size += pending_tx.size
         # Build the candidate block
         candidate_block = self._build_candidate_block(pending_txs)
         print(

@@ -27,11 +27,6 @@ class Transaction:
         self.fee = fee
 
     @property
-    def size(self):
-        """Calculates the size of the transaction"""
-        return 0.2  # TODO Vai buscar o tamanho da transação ao config file
-
-    @property
     def hash(self):
         """The transaction hash using Keccak 256"""
         return encode_hex(keccak_256(str(self).encode('utf-8')))

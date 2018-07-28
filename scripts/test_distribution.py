@@ -65,8 +65,8 @@ def get_from_file(file_path):
     times = []
     with open(file_path) as f:
         for t in f:
-            print(float(t))
-            times.append(float(t))
+            print(int(t))
+            times.append(int(t))
     return array(times)
 
 
