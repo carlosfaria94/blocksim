@@ -1,0 +1,11 @@
+{
+  "blockchain": "bitcoin",
+  "locations": ["Tokyo", "Ohio", "Ireland"],
+  "bitcoin": {
+    "block_size_limit": 1
+  },
+  "ethereum": {
+    "block_gas_limit": 100000,
+    "tx_gas_limit": 1000
+  }
+}

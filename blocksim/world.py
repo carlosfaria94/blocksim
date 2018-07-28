@@ -28,36 +28,28 @@ class SimulationWorld:
     def __init__(self,
                  sim_duration: int,
                  initial_time: int,
-                 blockchain: str,
+                 config_file: str,
                  measured_latency: str,
                  measured_throughput_received: str,
                  measured_throughput_sent: str,
                  measured_delays: str):
-        if isinstance(sim_duration, int) is False:
-            raise TypeError(
-                'sim_duration needs to be an integer')
-        if isinstance(initial_time, int) is False:
-            raise TypeError(
-                'initial_time needs to be an integer')
-        if isinstance(blockchain, str) is False:
-            raise TypeError(
-                'blockchain needs to be a string')
         self._measured_delays = self._read_json_file(measured_delays)
         self._sim_duration = sim_duration
         self._initial_time = initial_time
-        self._blockchain = blockchain
+        self._config = self._read_json_file(config_file)
         self._measured_latency = measured_latency
         self._measured_throughput_received = measured_throughput_received
         self._measured_throughput_sent = measured_throughput_sent
         # Set the SimPy Environment
         self._env = simpy.Environment(initial_time=self._initial_time)
+        self._set_configs()
         self._set_delays()
         self._set_latencies()
         self._set_throughputs()
 
     @property
     def blockchain(self):
-        return self._blockchain
+        return self._env.config['blockchain']
 
     @property
     def locations(self):
@@ -70,17 +62,33 @@ class SimulationWorld:
     def start_simulation(self):
         self._env.run(until=self._sim_duration)
 
+    def _set_configs(self):
+        """Injects the different configuration variables to the environment variable to be
+        used during the simulation"""
+        self._env.config = self._config
+
     def _set_delays(self):
         """Injects the probability distribution delays in the environment variable to be
         used during the simulation"""
+        blockchain_switcher = {
+            'bitcoin': self._set_bitcoin_delays,
+            'ethereum': self._set_ethereum_delays
+        }
+        return blockchain_switcher.get(self.blockchain, lambda: "Invalid blockchain")()
+
+    def _set_bitcoin_delays(self):
         self._validate_distribution(
-            self._measured_delays['tx_validation'],
-            self._measured_delays['block_validation'])
-        self._env.delays = dict(
-            VALIDATE_TX=self._measured_delays['tx_validation'],
-            VALIDATE_BLOCK=self._measured_delays['block_validation'],
-            TIME_BETWEEN_BLOCKS=self._measured_delays['time_between_blocks_seconds']
-        )
+            self._measured_delays['bitcoin']['tx_validation'],
+            self._measured_delays['bitcoin']['block_validation'],
+            self._measured_delays['bitcoin']['time_between_blocks_seconds'])
+        self._env.delays = self._measured_delays['bitcoin']
+
+    def _set_ethereum_delays(self):
+        self._validate_distribution(
+            self._measured_delays['ethereum']['tx_validation'],
+            self._measured_delays['ethereum']['block_validation'],
+            self._measured_delays['ethereum']['time_between_blocks_seconds'])
+        self._env.delays = self._measured_delays['ethereum']
 
     def _set_latencies(self):
         """Reads the file with the latencies measurements taken"""

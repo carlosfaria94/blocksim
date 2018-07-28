@@ -1,4 +1,3 @@
-from blocksim.models.ethereum.config import default_config
 from blocksim.utils import encode_hex
 from blocksim.models.block import BlockHeader as BaseBlockHeader
 from blocksim.models.block import Block as BaseBlock
@@ -21,11 +20,11 @@ class BlockHeader(BaseBlockHeader):
 
     def __init__(self,
                  prevhash=encode_hex(b'\x00' * 32),
-                 number=default_config['GENESIS_NUMBER'],
-                 timestamp=default_config['GENESIS_TIMESTAMP'],
+                 number=0,
+                 timestamp=0,
                  coinbase=encode_hex(b'\x00' * 20),
-                 difficulty=default_config['GENESIS_DIFFICULTY'],
-                 gas_limit=default_config['GENESIS_GAS_LIMIT'],
+                 difficulty=100000,
+                 gas_limit=3000000,
                  gas_used=0,
                  nonce=''):
         super().__init__(prevhash, number, timestamp, coinbase, difficulty, nonce)

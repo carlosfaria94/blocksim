@@ -1,6 +1,5 @@
 import time
 from blocksim.utils import keccak_256, encode_hex
-from blocksim.models.config import default_config
 
 
 class BlockHeader:
@@ -18,10 +17,10 @@ class BlockHeader:
 
     def __init__(self,
                  prevhash=encode_hex(b'\x00' * 32),
-                 number=default_config['GENESIS_NUMBER'],
+                 number=0,
                  timestamp=int(time.time()),
                  coinbase=encode_hex(b'\x00' * 20),
-                 difficulty=default_config['GENESIS_DIFFICULTY'],
+                 difficulty=100000,
                  nonce=''):
         self.prevhash = prevhash
         self.number = number

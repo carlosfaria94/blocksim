@@ -6,7 +6,6 @@ from blocksim.models.chain import Chain
 from blocksim.models.consensus import Consensus
 from blocksim.models.db import BaseDB
 from blocksim.models.transaction_queue import TransactionQueue
-from blocksim.models.ethereum.config import default_config
 from blocksim.utils import time
 
 
@@ -29,7 +28,6 @@ class ETHNode(Node):
                          location,
                          address,
                          chain)
-        self.config = default_config
         self.temp_headers = {}
         self.network_message = Message(self)
         if is_mining:
@@ -42,8 +40,7 @@ class ETHNode(Node):
         """Builds a new candidate block and propagate it to the network"""
         if self.is_mining is False:
             raise RuntimeError(f'Node {self.location} is not a miner')
-        # TODO: Change this GENESIS_GAS_LIMIT as input paramater
-        gas_limit_per_block = 63000 or self.config['GENESIS_GAS_LIMIT']
+        gas_limit_per_block = self.env.config['ethereum']['block_gas_limit']
         txs_intrinsic_gas = 0
         pending_txs = []
         while txs_intrinsic_gas < gas_limit_per_block:

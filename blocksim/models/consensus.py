@@ -1,4 +1,3 @@
-from blocksim.models.ethereum.config import default_config
 from blocksim.utils import get_random_values
 
 
@@ -14,12 +13,10 @@ class Consensus:
 
     def __init__(self, env):
         self.env = env
-        self.config = default_config
 
     def calc_difficulty(self, parent, timestamp):
         """Difficulty adjustment algorithm for the simulator.
         A block that is created in less time, have more difficulty associated"""
-        # offset = parent.header.difficulty // self.config['BLOCK_DIFF_FACTOR']
         timestamp_diff = timestamp - parent.header.timestamp
         return int(parent.header.difficulty + timestamp_diff)
 
@@ -28,10 +25,10 @@ class Consensus:
         For now, it only applies a delay in simulation, corresponding to previous measurements"""
         yield self.env.timeout(duration)
 
-    def validate_block(self, duration, state=None, block=None):
+    def validate_block(self, block=None):
         """ Simulates the block validation.
         For now, it only applies a delay in simulation, corresponding to previous measurements"""
-        yield self.env.timeout(duration)
+        return round(get_random_values(self.env.delays['block_validation'])[0], 2)
 
     def apply_transaction(self, duration, state=None, tx=None):
         """ Simulates the transaction-level state transition function.
@@ -41,4 +38,4 @@ class Consensus:
     def validate_transaction(self, tx=None):
         """ Simulates the transaction validation.
         For now, it only calculates a delay in simulation, corresponding to previous measurements"""
-        return round(get_random_values(self.env.delays['VALIDATE_TX'])[0], 2)
+        return round(get_random_values(self.env.delays['tx_validation'])[0], 2)

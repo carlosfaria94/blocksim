@@ -17,11 +17,11 @@ def set_simulation():
     world = SimulationWorld(
         duration,
         now,
-        'bitcoin',
+        'input-parameters/config.json',
         'input-parameters/latency.json',
         'input-parameters/throughput-received.json',
         'input-parameters/throughput-sent.json',
-        'input-parameters/delays-bitcoin.json')
+        'input-parameters/delays.json')
     run_model(world)
 
 
@@ -55,9 +55,9 @@ def run_model(world):
     # Full Connect all nodes
     for node in nodes_list:
         node.connect(nodes_list)
-
+    # Generate 6 transactions
     transactions = generate_transactions(6)
-
+    # A node in a list broadcast all the 6 transactions
     world.env.process(nodes_list[2].broadcast_transactions(transactions))
 
     world.start_simulation()

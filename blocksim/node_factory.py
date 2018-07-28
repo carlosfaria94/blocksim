@@ -10,6 +10,7 @@ class NodeFactory:
         self._network = network
 
     def create_nodes(self, miners, non_miners):
+        # TODO: Use self.env.config[locations]
         self._check_location(miners, non_miners)
         # If a new blockchain is modeled it needs to be inserted here
         blockchain_switcher = {

@@ -6,7 +6,6 @@ from blocksim.models.db import BaseDB
 from blocksim.models.consensus import Consensus
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.models.block import Block, BlockHeader
-from blocksim.models.config import default_config
 from blocksim.utils import time
 
 
@@ -29,7 +28,6 @@ class BTCNode(Node):
                          location,
                          address,
                          chain)
-        self.config = default_config
         self.temp_txs = {}
         self.tx_on_transit = {}
         self.network_message = Message(self)
@@ -42,7 +40,7 @@ class BTCNode(Node):
         """Builds a new candidate block and propagate it to the network"""
         if self.is_mining is False:
             raise RuntimeError(f'Node {self.location} is not a miner')
-        block_size = self.config['BLOCK_SIZE_LIMIT']
+        block_size = self.env.config['bitcoin']['block_size_limit']
         txs_size = 0
         pending_txs = []
         while txs_size < block_size:

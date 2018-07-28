@@ -28,7 +28,7 @@ class Network:
                 self._list_probabilities.append(node_prob)
 
     def start_heartbeat(self):
-        """During all the simulation its choosen 1 or 2 nodes to broadcast a candidate block.
+        """During all the simulation its chosen 1 or 2 nodes to broadcast a candidate block.
 
         1 or 2 nodes are chosen only when a certain delay is passed. This delay simulates
         the time between blocks on the chosen blockchain.
@@ -39,7 +39,7 @@ class Network:
         self._init_lists()
         while True:
             time_between_blocks = round(get_random_values(
-                self.env.delays['TIME_BETWEEN_BLOCKS'])[0], 2)
+                self.env.delays['time_between_blocks_seconds'])[0], 2)
             yield self.env.timeout(time_between_blocks)
             how_many_nodes = randint(1, 2)
             selected_nodes = []
