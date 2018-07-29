@@ -110,17 +110,10 @@ class Node:
             self._read_envelope(envelope)
 
     def send(self, destination_address: str, msg):
-        node = self.active_sessions.get(destination_address)
-        active_connection = node.get('connection')
-        if active_connection is None and msg['id'] == 0:
-            # We do not have an active connection with the destination because its a ACK msg
-            destination_node = self.network.get_node(destination_address)
-            active_connection = Connection(self.env, self, destination_node)
-        elif active_connection is None and msg['id'] != 0:
-            # We do not have a connection and the message is not an ACK
-            raise RuntimeError(
-                f'It is needed to initiate an ACK phase with {destination_address} before sending any other message')
-
+        if self.address == destination_address:
+            return
+        node = self.active_sessions[destination_address]
+        active_connection = node['connection']
         origin_node = active_connection.origin_node
         destination_node = active_connection.destination_node
         upload_transmission_delay = get_sent_delay(
@@ -131,11 +124,8 @@ class Node:
 
     def broadcast(self, msg):
         """Broadcast a message to all nodes with an active session"""
-        for node_address, node in self.active_sessions.items():
-            connection = node.get('connection')
-            if connection is None:
-                raise RuntimeError(
-                    f'Not possible to create a direct connection with the node {node_address}')
+        for add, node in self.active_sessions.items():
+            connection = node['connection']
             origin_node = connection.origin_node
             destination_node = connection.destination_node
             upload_transmission_delay = get_sent_delay(

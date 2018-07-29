@@ -20,7 +20,7 @@ class TransactionQueue():
         # TODO: Order the list according to the fee
         self._transaction_queue.append(tx)
         print(
-            f'{self._node.address} at {time(self._env)}: Transaction {tx.hash[:8]} added to the queue {self}')
+            f'{self._node.address} at {time(self._env)}: Transaction {tx.hash[:8]} added to the queue')
 
     def get(self):
         # TODO: A delay to retrieve a transaction from the Queue

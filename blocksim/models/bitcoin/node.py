@@ -148,8 +148,8 @@ class BTCNode(Node):
             if tx_hash in self.temp_txs:
                 tx = self.temp_txs[tx_hash]
                 del self.temp_txs[tx_hash]
-                # print(
-                #    f'{self.address} at {time(self.env)}: Full transaction {tx.hash[:8]} preapred to send')
+                print(
+                    f'{self.address} at {time(self.env)}: Full transaction {tx.hash[:8]} preapred to send')
                 tx_msg = self.network_message.tx(tx)
                 self.env.process(
                     self.send(envelope.origin.address, tx_msg))
@@ -166,14 +166,19 @@ class BTCNode(Node):
             self.request_txs(request_txs, envelope.origin.address)
 
     def _receive_full_transaction(self, envelope):
-        """Handle full tx received"""
-        transaction = envelope.msg.get('tx')
-        del self.tx_on_transit[transaction.hash]
-        # If node is miner store transactions in a pool
+        """Handle full tx received. If node is miner store transactions in a pool"""
+        tx = envelope.msg.get('tx')
+        del self.tx_on_transit[tx.hash]
         if self.is_mining:
-            self.transaction_queue.put(transaction)
+            self.transaction_queue.put(tx)
         else:
-            self.env.process(self.broadcast_transactions([transaction]))
+            self.env.process(self._validate_tx(tx))
+        self.env.process(self.broadcast_transactions([tx]))
+
+    def _validate_tx(self, tx):
+        # Calculates the delay to validate the tx
+        tx_validation_delay = self.consensus.validate_transaction()
+        yield self.env.timeout(tx_validation_delay)
 
     ##              ##
     ## Blocks       ##
@@ -197,27 +202,6 @@ class BTCNode(Node):
         self.env.process(
             self.send(envelope.origin.address, get_data_msg))
 
-    def _receive_full_block(self, envelope):
-        """Handle full blocks received.
-        The node tries to add the block to the chain, by performing validation."""
-        block = envelope.msg['block']
-        is_added = self.chain.add_block(block)
-        if is_added:
-            print(
-                f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain {block.header}')
-        else:
-            print(
-                f'{self.address} at {time(self.env)}: Block NOT added to the chain {block.header}')
-
-        # TODO: Delete next lines. We need to have another way to see the final state of the chain for each node
-        head = self.chain.head
-        for i in range(head.header.number):
-            b = self.chain.get_block_by_number(i)
-            print(
-                f'{self.address} at {time(self.env)}: block {b.header.hash[:8]} #{b.header.number} {b.header.difficulty}')
-        print(
-            f'{self.address} at {time(self.env)}: >> head {head.header.hash[:8]} #{head.header.number} {head.header.difficulty}')
-
     def _send_full_blocks(self, envelope):
         """Send a full block (https://bitcoin.org/en/developer-reference#block) for any node that
         request it (`envelope.origin.address`) by using `getdata`.
@@ -230,3 +214,15 @@ class BTCNode(Node):
                 f'{self.address} at {time(self.env)}: Block {block.header.hash[:8]} preapred to send to {origin}')
             block_msg = self.network_message.block(block)
             self.env.process(self.send(origin, block_msg))
+
+    def _receive_full_block(self, envelope):
+        """Handle full blocks received.
+        The node tries to add the block to the chain, by performing validation."""
+        block = envelope.msg['block']
+        is_added = self.chain.add_block(block)
+        if is_added:
+            print(
+                f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain {block.header}')
+        else:
+            print(
+                f'{self.address} at {time(self.env)}: Block NOT added to the chain {block.header}')

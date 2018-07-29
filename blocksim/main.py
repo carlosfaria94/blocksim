@@ -5,6 +5,7 @@ from blocksim.world import SimulationWorld
 from blocksim.node_factory import NodeFactory
 from blocksim.models.network import Network
 from blocksim.models.transaction import Transaction
+from blocksim.models.ethereum.transaction import Transaction as ETHTransaction
 
 
 def broadcast_transactions(world, number_of_batches, transactions_per_batch, interval, nodes_list):
@@ -14,9 +15,13 @@ def broadcast_transactions(world, number_of_batches, transactions_per_batch, int
             # Generate a random string to a transaction be distinct from others
             rand_sign = ''.join(
                 choices(string.ascii_letters + string.digits, k=20))
-            tx = Transaction('address', 'address', 140, rand_sign, 50)
+            if world.blockchain == 'bitcoin':
+                tx = Transaction('address', 'address', 140, rand_sign, 50)
+            elif world.blockchain == 'ethereum':
+                # TODO: Get startgas from a user input
+                tx = ETHTransaction('address', 'address',
+                                    140, rand_sign, i, 2, 10)
             transactions.append(tx)
-
         world.env.data['broadcast_transactions'] += len(transactions)
         # Choose a random node to broadcast the transaction
         world.env.process(
@@ -34,7 +39,7 @@ def set_monitor(world):
 def set_simulation():
     now = int(time.time())
     # TODO: Create a func to user input only days and converts to seconds
-    duration = now + 86400  # 1day
+    duration = now + 18000  # 1day
     world = SimulationWorld(
         duration,
         now,

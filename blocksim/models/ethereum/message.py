@@ -42,12 +42,11 @@ class Message:
             'size': 10
         }
 
-    def get_headers(self, block_number: int, max_headers: int, reverse: int):
+    def get_headers(self, block_number: int, max_headers: int):
         return {
             'id': 'get_headers',
             'block_number': block_number,
             'max_headers': max_headers,
-            'reverse': reverse,
             'size': 10
         }
 

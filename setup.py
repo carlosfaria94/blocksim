@@ -9,7 +9,8 @@ setup(
     packages=find_packages('.'),
     install_requires=[
         'simpy',
-        'schema'
+        'schema',
+        'scipy'
     ],
     author='Carlos Faria',
     author_email='carlosfigueira@tecnico.ulisboa.pt',
