@@ -52,7 +52,9 @@ class Network:
                 print(
                     f'Network at {time(self.env)}: Node {chosen.address} chosen to broadcast his candidate block')
                 # Give orders to the choosen node to broadcast his candidate block
-                self.env.process(chosen.build_new_block())
+                chosen.build_new_block()
+                # Wait 2 seconds after choose the next node
+                yield self.env.timeout(2)
 
 
 class Connection:

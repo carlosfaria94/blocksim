@@ -51,7 +51,7 @@ class ETHNode(Node):
         candidate_block = self._build_candidate_block(
             pending_txs, gas_limit_per_block, txs_intrinsic_gas)
         print(
-            f'{self.address} at {time(self.env)}: New candidate block created {candidate_block.header.hash[:8]}')
+            f'{self.address} at {time(self.env)}: New candidate block #{candidate_block.header.number} created {candidate_block.header.hash[:8]} with difficulty {candidate_block.header.difficulty}')
         # Add the candidate block to the chain of the miner node
         self.chain.add_block(candidate_block)
         # We need to broadcast the new candidate block across the network

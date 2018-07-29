@@ -55,12 +55,13 @@ class BTCNode(Node):
             get_random_values(transactions_per_block_dist)[0])
         pending_txs = []
         for i in range(transactions_per_block * block_size):
-            pending_tx = yield self.transaction_queue.get()
+            if self.transaction_queue.is_empty():
+                break
+            pending_tx = self.transaction_queue.get()
             pending_txs.append(pending_tx)
-        # Build the candidate block
         candidate_block = self._build_candidate_block(pending_txs)
         print(
-            f'{self.address} at {time(self.env)}: New candidate block created {candidate_block.header.hash[:8]}')
+            f'{self.address} at {time(self.env)}: New candidate block #{candidate_block.header.number} created {candidate_block.header.hash[:8]} with difficulty {candidate_block.header.difficulty}')
         # Add the candidate block to the chain of the miner node
         self.chain.add_block(candidate_block)
         # We need to broadcast the new candidate block across the network
@@ -147,8 +148,8 @@ class BTCNode(Node):
             if tx_hash in self.temp_txs:
                 tx = self.temp_txs[tx_hash]
                 del self.temp_txs[tx_hash]
-                print(
-                    f'{self.address} at {time(self.env)}: Full transaction {tx.hash[:8]} preapred to send')
+                # print(
+                #    f'{self.address} at {time(self.env)}: Full transaction {tx.hash[:8]} preapred to send')
                 tx_msg = self.network_message.tx(tx)
                 self.env.process(
                     self.send(envelope.origin.address, tx_msg))

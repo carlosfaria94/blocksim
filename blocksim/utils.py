@@ -38,7 +38,12 @@ def get_received_delay(env, message_size: float, origin: str, destination: str, 
     If `n` is 1 it returns a `float`, if `n > 1` returns an array of `n` floats.
     """
     distribution = env.delays['THROUGHPUT_RECEIVED'][origin][destination]
-    return _calc_throughput(distribution, message_size, n)
+    delay = _calc_throughput(distribution, message_size, n)
+    if delay < 0:
+        raise RuntimeError(
+            f'Negative received delay ({delay}) to origin {origin} and destination {destination}')
+    else:
+        return delay
 
 
 def get_sent_delay(env, message_size: float, origin: str, destination: str, n=1):
@@ -53,11 +58,20 @@ def get_sent_delay(env, message_size: float, origin: str, destination: str, n=1)
     If `n` is 1 it returns a `float`, if `n > 1` returns an array of `n` floats.
     """
     distribution = env.delays['THROUGHPUT_SENT'][origin][destination]
-    return _calc_throughput(distribution, message_size, n)
+    delay = _calc_throughput(distribution, message_size, n)
+    if delay < 0:
+        raise RuntimeError(
+            f'Negative sent delay ({delay}) to origin {origin} and destination {destination}')
+    else:
+        return delay
 
 
 def _calc_throughput(distribution: dict, message_size: float, n):
     rand_throughputs = get_random_values(distribution, n)
+    # TODO: FIX: There are distributions returning negative values, a workaround is to calculate again the random values
+    for rand in rand_throughputs:
+        if rand < 0:
+            rand_throughputs = get_random_values(distribution, n)
     delays = []
     for throughput in rand_throughputs:
         delay = (message_size * 8) / throughput

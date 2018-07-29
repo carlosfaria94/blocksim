@@ -1,19 +1,40 @@
 import time
+import string
+from random import randint, choices
 from blocksim.world import SimulationWorld
 from blocksim.node_factory import NodeFactory
 from blocksim.models.network import Network
 from blocksim.models.transaction import Transaction
 
 
-def generate_transactions(n):
-    return [Transaction(
-        'address', 'address', 140, f'sig{i}', 50) for i in range(n)]
+def broadcast_transactions(world, number_of_batches, transactions_per_batch, interval, nodes_list):
+    for i in range(number_of_batches):
+        transactions = []
+        for i in range(transactions_per_batch):
+            # Generate a random string to a transaction be distinct from others
+            rand_sign = ''.join(
+                choices(string.ascii_letters + string.digits, k=20))
+            tx = Transaction('address', 'address', 140, rand_sign, 50)
+            transactions.append(tx)
+
+        world.env.data['broadcast_transactions'] += len(transactions)
+        # Choose a random node to broadcast the transaction
+        world.env.process(
+            nodes_list[randint(0, len(nodes_list)-1)].broadcast_transactions(transactions))
+        yield world.env.timeout(interval)
+
+
+def set_monitor(world):
+    world.env.data = dict(
+        number_of_transactions_queue=0,
+        broadcast_transactions=0
+    )
 
 
 def set_simulation():
     now = int(time.time())
     # TODO: Create a func to user input only days and converts to seconds
-    duration = now + 10000
+    duration = now + 86400  # 1day
     world = SimulationWorld(
         duration,
         now,
@@ -28,7 +49,7 @@ def set_simulation():
 def run_model(world):
     # Create the network
     network = Network(world.env, 'NetworkXPTO')
-
+    set_monitor(world)
     miners = {
         'Ohio': {
             'how_many': 2,
@@ -55,12 +76,12 @@ def run_model(world):
     # Full Connect all nodes
     for node in nodes_list:
         node.connect(nodes_list)
-    # Generate 6 transactions
-    transactions = generate_transactions(6)
-    # A node in a list broadcast all the 6 transactions
-    world.env.process(nodes_list[2].broadcast_transactions(transactions))
+
+    world.env.process(broadcast_transactions(world, 5, 6, 300, nodes_list))
 
     world.start_simulation()
+
+    print(world.env.data)
 
 
 if __name__ == '__main__':

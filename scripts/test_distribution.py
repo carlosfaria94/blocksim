@@ -70,9 +70,38 @@ def get_from_file(file_path):
     return array(times)
 
 
-x = get_from_file('')
+#x = get_from_file('')
+x = array([
+    96.9109,
+    52.1524,
+    47.4363,
+    54.4703,
+    43.97819,
+    120.228,
+    79.8724,
+    88.1638,
+    88.7114,
+    82.5957,
+    44.1287,
+    81.9677,
+    48.05,
+    76.9131,
+    78.9326,
+    96.1828,
+    46.3821,
+    100.384,
+    68.8722,
+    83.9647,
+    43.8686,
+    81.0614,
+    74.1403,
+    43.6076
+])
 print(x)
 dst = Distribution()
 dst.Fit(x)
-print(dst.Random(10))
-dst.Plot(x)
+rands = dst.Random(1000)
+for rand in rands:
+    if rand < 0:
+        print(f'ALERT! {rand} negative delays')
+# dst.Plot(x)
