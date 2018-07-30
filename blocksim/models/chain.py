@@ -110,14 +110,18 @@ class Chain:
         if block.header.prevhash == self._head_hash:
             print(
                 f'{self.node.address} at {time(self.env)}: Adding block #{block.header.number} ({block.header.hash[:8]}) to the head', )
-            self.consensus.apply_block(self.env, 2)
+            # TODO: We need to measure the apply_block
+            # self.consensus.apply_block(self.env, 2)
             self.db.put(f'block:{block.header.number}', block.header.hash)
             self._head_hash = block.header.hash
         # Or is the block being added to a chain that is not currently the head?
         elif block.header.prevhash in self.db:
             print(
                 f'{self.node.address} at {time(self.env)}: Receiving block #{block.header.number} ({block.header.hash[:8]}) not on head ({self._head_hash[:8]}), adding to secondary chain')
-            self.consensus.apply_block(self.env, 2)
+            key = f'forks_{self.node.address}'
+            self.env.data[key] += 1
+            # TODO: We need to measure the apply_block
+            # self.consensus.apply_block(self.env, 2)
             block_td = self.get_pow_difficulty(block)
             # If the block should be the new head, replace the head
             if block_td > self.get_pow_difficulty(self.head):

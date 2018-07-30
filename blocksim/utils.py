@@ -1,5 +1,5 @@
 import binascii
-import datetime
+from datetime import datetime
 import random
 from ast import literal_eval as make_tuple
 import scipy.stats
@@ -83,7 +83,7 @@ def _calc_throughput(distribution: dict, message_size: float, n):
 
 
 def time(env):
-    return datetime.datetime.utcfromtimestamp(env.now).strftime('%m-%d %H:%M:%S')
+    return datetime.utcfromtimestamp(env.now).strftime('%m-%d %H:%M:%S')
 
 
 def get_random_values(distribution: dict, n=1):

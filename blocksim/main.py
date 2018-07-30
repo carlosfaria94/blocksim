@@ -1,5 +1,6 @@
 import time
 import string
+from json import dumps as dump_json
 from random import randint, choices
 from blocksim.world import SimulationWorld
 from blocksim.node_factory import NodeFactory
@@ -22,24 +23,40 @@ def broadcast_transactions(world, number_of_batches, transactions_per_batch, int
                 tx = ETHTransaction('address', 'address',
                                     140, rand_sign, i, 2, 10)
             transactions.append(tx)
-        world.env.data['broadcast_transactions'] += len(transactions)
+        world.env.data['created_transactions'] += len(transactions)
         # Choose a random node to broadcast the transaction
         world.env.process(
             nodes_list[randint(0, len(nodes_list)-1)].broadcast_transactions(transactions))
         yield world.env.timeout(interval)
 
 
-def set_monitor(world):
-    world.env.data = dict(
-        number_of_transactions_queue=0,
-        broadcast_transactions=0
-    )
+def write_report(world):
+    with open('output/report.json', 'w') as f:
+        f.write(dump_json(world.env.data))
+
+
+def report_node_chain(world, nodes_list):
+    for node in nodes_list:
+        head = node.chain.head
+        chain_list = []
+        num_blocks = 0
+        for i in range(head.header.number):
+            b = node.chain.get_block_by_number(i)
+            chain_list.append(str(b.header))
+            num_blocks += 1
+        chain_list.append(str(head.header))
+        key = f'{node.address}_chain'
+        world.env.data[key] = {
+            'head_block_hash': f'{head.header.hash[:8]} #{head.header.number}',
+            'number_of_blocks': num_blocks,
+            'chain_list': chain_list
+        }
 
 
 def set_simulation():
     now = int(time.time())
     # TODO: Create a func to user input only days and converts to seconds
-    duration = now + 18000  # 1day
+    duration = 72000
     world = SimulationWorld(
         duration,
         now,
@@ -54,7 +71,7 @@ def set_simulation():
 def run_model(world):
     # Create the network
     network = Network(world.env, 'NetworkXPTO')
-    set_monitor(world)
+
     miners = {
         'Ohio': {
             'how_many': 2,
@@ -86,7 +103,8 @@ def run_model(world):
 
     world.start_simulation()
 
-    print(world.env.data)
+    report_node_chain(world, nodes_list)
+    write_report(world)
 
 
 if __name__ == '__main__':

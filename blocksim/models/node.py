@@ -41,6 +41,9 @@ class Node:
         self.connecting = None
         # Join the node to the network
         self.network.add_node(self)
+        # Set the monitor to count the forks during the simulation
+        key = f'forks_{address}'
+        self.env.data[key] = 0
 
     def connect(self, nodes: list):
         """Simulate an acknowledgement phase with given nodes. During simulation the nodes

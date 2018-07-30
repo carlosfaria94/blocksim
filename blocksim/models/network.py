@@ -73,8 +73,8 @@ class Connection:
         self.store.put(envelope)
 
     def put(self, envelope):
-        print(
-            f'{envelope.origin.address} at {envelope.timestamp}: Message (ID: {envelope.msg["id"]}) sent with {envelope.msg["size"]} MB with a destination: {envelope.destination.address}')
+        # print(
+        #    f'{envelope.origin.address} at {envelope.timestamp}: Message (ID: {envelope.msg["id"]}) sent with {envelope.msg["size"]} MB with a destination: {envelope.destination.address}')
         self.env.process(self.latency(envelope))
 
     def get(self):

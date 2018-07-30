@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from blocksim.utils import keccak_256, encode_hex
 
 
@@ -40,7 +41,9 @@ class BlockHeader:
 
     def __str__(self):
         """Returns a readable representation of the block"""
-        return f'<{self.__class__.__name__}(#{self.number} prevhash:{self.prevhash} timestamp:{self.timestamp} coinbase:{self.coinbase} nonce:{self.nonce})>'
+        timestamp = datetime.utcfromtimestamp(
+            self.timestamp).strftime('%m-%d %H:%M:%S')
+        return f'<{self.__class__.__name__}(#{self.number} prevhash:{self.prevhash[:8]} timestamp:{timestamp} coinbase:{self.coinbase} difficulty:{self.difficulty})>'
 
     def __eq__(self, other):
         """Two blocks are equal iff they have the same hash."""

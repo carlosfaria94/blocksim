@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 import simpy
 from schema import Schema, SchemaError
 
@@ -46,6 +47,14 @@ class SimulationWorld:
         self._set_delays()
         self._set_latencies()
         self._set_throughputs()
+        # Set the monitor
+        end_simulation = self._initial_time + self._sim_duration
+        self._env.data = {
+            'start_simulation_time': datetime.utcfromtimestamp(
+                self._initial_time).strftime('%m-%d %H:%M:%S'),
+            'end_simulation_time': datetime.utcfromtimestamp(end_simulation).strftime('%m-%d %H:%M:%S'),
+            'created_transactions': 0
+        }
 
     @property
     def blockchain(self):
@@ -60,7 +69,8 @@ class SimulationWorld:
         return self._env
 
     def start_simulation(self):
-        self._env.run(until=self._sim_duration)
+        end = self._initial_time + self._sim_duration
+        self._env.run(until=end)
 
     def _set_configs(self):
         """Injects the different configuration variables to the environment variable to be
