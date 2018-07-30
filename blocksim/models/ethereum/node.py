@@ -1,12 +1,12 @@
 from blocksim.models.node import Node
 from blocksim.models.network import Network
-from blocksim.models.ethereum.block import Block, BlockHeader
-from blocksim.models.ethereum.message import Message
 from blocksim.models.chain import Chain
 from blocksim.models.consensus import Consensus
 from blocksim.models.db import BaseDB
 from blocksim.models.transaction_queue import TransactionQueue
 from blocksim.utils import time
+from blocksim.models.ethereum.block import Block, BlockHeader
+from blocksim.models.ethereum.message import Message
 
 
 class ETHNode(Node):

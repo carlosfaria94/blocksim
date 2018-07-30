@@ -2,8 +2,8 @@ import time
 import string
 from json import dumps as dump_json
 from random import randint, choices
-from blocksim.world import SimulationWorld
-from blocksim.node_factory import NodeFactory
+from world import SimulationWorld
+from node_factory import NodeFactory
 from blocksim.models.network import Network
 from blocksim.models.transaction import Transaction
 from blocksim.models.ethereum.transaction import Transaction as ETHTransaction
@@ -60,7 +60,7 @@ def set_simulation():
     world = SimulationWorld(
         duration,
         now,
-        'input-parameters/config.json',
+        r'C:\Users\COMPUTER SCOENCE\blocksim\output\report.json',
         'input-parameters/latency.json',
         'input-parameters/throughput-received.json',
         'input-parameters/throughput-sent.json',

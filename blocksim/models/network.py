@@ -1,7 +1,6 @@
 from random import randint
 import simpy
-from blocksim.utils import get_random_values, random_pick, time
-from blocksim.utils import get_latency_delay
+from blocksim.utils import get_random_values, random_pick, time, get_latency_delay
 
 
 class Network:

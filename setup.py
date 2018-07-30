@@ -10,7 +10,8 @@ setup(
     install_requires=[
         'simpy',
         'schema',
-        'scipy'
+        'scipy',
+        'pysha3'
     ],
     author='Carlos Faria',
     author_email='carlosfigueira@tecnico.ulisboa.pt',
