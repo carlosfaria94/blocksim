@@ -68,10 +68,6 @@ def get_sent_delay(env, message_size: float, origin: str, destination: str, n=1)
 
 def _calc_throughput(distribution: dict, message_size: float, n):
     rand_throughputs = get_random_values(distribution, n)
-    # TODO: FIX: There are distributions returning negative values, a workaround is to calculate again the random values
-    for rand in rand_throughputs:
-        if rand < 0:
-            rand_throughputs = get_random_values(distribution, n)
     delays = []
     for throughput in rand_throughputs:
         delay = (message_size * 8) / throughput

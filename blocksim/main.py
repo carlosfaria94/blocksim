@@ -60,7 +60,7 @@ def set_simulation():
     world = SimulationWorld(
         duration,
         now,
-        r'C:\Users\COMPUTER SCOENCE\blocksim\output\report.json',
+        'input-parameters/config.json',
         'input-parameters/latency.json',
         'input-parameters/throughput-received.json',
         'input-parameters/throughput-sent.json',
