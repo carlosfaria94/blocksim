@@ -1,12 +1,13 @@
-from random import randint
-import simpy
-from blocksim.utils import get_random_values, random_pick, time, get_latency_delay
+import scipy
+from simpy import Store
+from blocksim.utils import get_random_values, time, get_latency_delay
 
 
 class Network:
     def __init__(self, env, name):
         self.env = env
         self.name = name
+        self.blockchain = self.env.config['blockchain']
         self.total_hashrate = 0
         self._nodes = {}
         self._list_nodes = []
@@ -27,10 +28,17 @@ class Network:
                 self._list_probabilities.append(node_prob)
 
     def start_heartbeat(self):
-        """During all the simulation its chosen 1 or 2 nodes to broadcast a candidate block.
+        """ The "heartbeat" frequency of any blockchain network based on PoW is time difference
+        between blocks. With this function we simulate the network heartbeat frequency.
 
-        1 or 2 nodes are chosen only when a certain delay is passed. This delay simulates
-        the time between blocks on the chosen blockchain.
+        During all the simulation, between time intervals (corresponding to the time between blocks)
+        its chosen 1 or 2 nodes to broadcast a candidate block.
+
+        We choose 2 nodes, when we want to simulate an orphan block situation.
+
+        A fork due to orphan blocks occurs when there are two equally or nearly equally
+        valid candidates for the next block of data in the blockchain.  This event can occur
+        when the two blocks are found close in time, and are submitted to the network at different “ends”
 
         Each node has a corresponding hashrate. The greater the hashrate, the greater the
         probability of the node being chosen.
@@ -40,20 +48,26 @@ class Network:
             time_between_blocks = round(get_random_values(
                 self.env.delays['time_between_blocks_seconds'])[0], 2)
             yield self.env.timeout(time_between_blocks)
-            how_many_nodes = randint(1, 2)
-            selected_nodes = []
-            for i in range(how_many_nodes):
-                chosen = random_pick(
-                    self._list_nodes, self._list_probabilities)
-                if chosen in selected_nodes:
-                    break
-                selected_nodes.append(chosen)
-                print(
-                    f'Network at {time(self.env)}: Node {chosen.address} chosen to broadcast his candidate block')
-                # Give orders to the choosen node to broadcast his candidate block
-                chosen.build_new_block()
-                # Wait 2 seconds after choose the next node
-                yield self.env.timeout(2)
+            orphan_blocks_probability = self.env.config[self.blockchain]['orphan_blocks_probability']
+            simulate_orphan_blocks = scipy.random.choice(
+                [True, False], 1, p=[orphan_blocks_probability, 1-orphan_blocks_probability])[0]
+            if simulate_orphan_blocks:
+                selected_nodes = scipy.random.choice(
+                    self._list_nodes, 2, replace=False, p=self._list_probabilities)
+                for selected_node in selected_nodes:
+                    self._build_new_block(selected_node)
+                    # Wait 2 seconds to next node build a new block
+                    yield self.env.timeout(2)
+            else:
+                selected_node = scipy.random.choice(
+                    self._list_nodes, 1, replace=False, p=self._list_probabilities)[0]
+                self._build_new_block(selected_node)
+
+    def _build_new_block(self, node):
+        print(
+            f'Network at {time(self.env)}: Node {node.address} selected to broadcast his candidate block')
+        # Give orders to the selected node to broadcast his candidate block
+        node.build_new_block()
 
 
 class Connection:
@@ -61,7 +75,7 @@ class Connection:
 
     def __init__(self, env, origin_node, destination_node):
         self.env = env
-        self.store = simpy.Store(env)
+        self.store = Store(env)
         self.origin_node = origin_node
         self.destination_node = destination_node
 
@@ -72,8 +86,8 @@ class Connection:
         self.store.put(envelope)
 
     def put(self, envelope):
-        # print(
-        #    f'{envelope.origin.address} at {envelope.timestamp}: Message (ID: {envelope.msg["id"]}) sent with {envelope.msg["size"]} MB with a destination: {envelope.destination.address}')
+        print(
+            f'{envelope.origin.address} at {envelope.timestamp}: Message (ID: {envelope.msg["id"]}) sent with {envelope.msg["size"]} MB with a destination: {envelope.destination.address}')
         self.env.process(self.latency(envelope))
 
     def get(self):

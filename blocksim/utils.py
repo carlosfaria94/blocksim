@@ -90,19 +90,6 @@ def get_random_values(distribution: dict, n=1):
     return dist.rvs(*param[:-2], loc=param[-2], scale=param[-1], size=n)
 
 
-def random_pick(some_list, probabilities):
-    assert len(some_list) == len(probabilities)
-    assert 0 <= min(probabilities) and max(probabilities) <= 1
-    assert abs(sum(probabilities)-1.0) < 1.0e-5
-    x = random.uniform(0, 1)
-    cumulative_probability = 0.0
-    for item, item_probability in zip(some_list, probabilities):
-        cumulative_probability += item_probability
-        if x < cumulative_probability:
-            break
-    return item
-
-
 def decode_hex(s):
     if isinstance(s, str):
         return bytes.fromhex(s)

@@ -7,10 +7,12 @@
       "name": "beta",
       "parameters":
         "(3.4538110963361333, 4.240939683805738, 705.4815204696233, 2159.387403502942)"
-    }
+    },
+    "orphan_blocks_probability": 0.003
   },
   "ethereum": {
     "block_gas_limit": 100000,
-    "tx_gas_limit": 1000
+    "tx_gas_limit": 1000,
+    "orphan_blocks_probability": 0.003
   }
 }
