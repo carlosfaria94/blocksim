@@ -35,6 +35,8 @@ class BTCNode(Node):
             # Transaction Queue to store the transactions
             self.transaction_queue = TransactionQueue(
                 env, self, self.consensus)
+        self._know_version = []
+        self._handshaking = env.event()
 
     def build_new_block(self):
         """Builds a new candidate block and propagate it to the network
@@ -86,6 +88,10 @@ class BTCNode(Node):
         """It implements how bitcon P2P protocol works, more info here:
         https://bitcoin.org/en/developer-reference#p2p-network"""
         super()._read_envelope(envelope)
+        if envelope.msg['id'] == 'version':
+            self._receive_version(envelope)
+        if envelope.msg['id'] == 'verack':
+            self._receive_verack(envelope)
         if envelope.msg['id'] == 'inv':
             if envelope.msg['type'] == 'block':
                 self._receive_new_inv_blocks(envelope)
@@ -100,6 +106,41 @@ class BTCNode(Node):
             self._receive_full_block(envelope)
         if envelope.msg['id'] == 'tx':
             self._receive_full_transaction(envelope)
+
+    ##              ##
+    ## Handshake    ##
+    ##              ##
+
+    def connect(self, nodes: list):
+        super().connect(nodes)
+        for node in nodes:
+            self._send_version(node.address)
+
+    def _send_version(self, destination_address: str):
+        """When a node creates an outgoing connection, it will immediately advertise its version"""
+        if destination_address not in self._know_version:
+            version_msg = self.network_message.version()
+            print(
+                f'{self.address} at {time(self.env)}: Version message sent to {destination_address}')
+            self._know_version.append(destination_address)
+            self.env.process(self.send(destination_address, version_msg))
+
+    def _receive_version(self, envelope):
+        """After a node receive a message it will send a ACK message, which informs the
+        acceptance of the version. It also send his version to the destination, only if it
+        was not send previously."""
+        verack_msg = self.network_message.verack()
+        print(
+            f'{self.address} at {time(self.env)}: Version message received from {envelope.origin.address} and verack sent')
+        self.env.process(self.send(envelope.origin.address, verack_msg))
+        print(f'{self.address} at {time(self.env)}: Send the response version to {envelope.origin.address}')
+        self._send_version(envelope.origin.address)
+
+    def _receive_verack(self, envelope):
+        self._handshaking.succeed()
+        self._handshaking = self.env.event()
+        print(
+            f'{self.address} at {time(self.env)}: Receive ACK from {envelope.origin.address}')
 
     ##              ##
     ## Transactions ##
@@ -151,8 +192,7 @@ class BTCNode(Node):
                 print(
                     f'{self.address} at {time(self.env)}: Full transaction {tx.hash[:8]} preapred to send')
                 tx_msg = self.network_message.tx(tx)
-                self.env.process(
-                    self.send(envelope.origin.address, tx_msg))
+                self.env.process(self.send(envelope.origin.address, tx_msg))
 
     def _receive_new_inv_transactions(self, envelope):
         """Handle new transactions received"""

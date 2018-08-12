@@ -34,7 +34,7 @@ class ETHNode(Node):
             # Transaction Queue to store the transactions
             self.transaction_queue = TransactionQueue(
                 env, self, self.consensus)
-        self.handshaking = env.event()
+        self._handshaking = env.event()
 
     def build_new_block(self):
         """Builds a new candidate block and propagate it to the network
@@ -123,8 +123,8 @@ class ETHNode(Node):
         node = self.active_sessions.get(envelope.origin.address)
         node['status'] = envelope.msg
         self.active_sessions[envelope.origin.address] = node
-        self.handshaking.succeed()
-        self.handshaking = self.env.event()
+        self._handshaking.succeed()
+        self._handshaking = self.env.event()
 
     ##              ##
     ## Transactions ##
@@ -134,7 +134,7 @@ class ETHNode(Node):
         """Broadcast transactions to all nodes with an active session and mark the hashes
         as known by each node"""
         yield self.connecting  # Wait for all connections
-        yield self.handshaking  # Wait for handshaking to be completed
+        yield self._handshaking  # Wait for handshaking to be completed
         for node_address, node in self.active_sessions.items():
             for tx in transactions:
                 # Checks if the transaction was previous sent

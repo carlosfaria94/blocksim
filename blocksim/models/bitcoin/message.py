@@ -7,13 +7,25 @@ class Message:
     def __init__(self, origin_node):
         self.origin_node = origin_node
 
+    def version(self):
+        return {
+            'id': 'version',
+            'size': 1
+        }
+
+    def verack(self):
+        return {
+            'id': 'verack',
+            'size': 1
+        }
+
     def inv(self, hashes: list, _type: str):
         """Allows a node to advertise its knowledge of one or more transactions or blocks"""
         return {
             'id': 'inv',
             'type': _type,
             'hashes': hashes,
-            'size': 10
+            'size': 1
         }
 
     def tx(self, tx):
@@ -21,7 +33,7 @@ class Message:
         return {
             'id': 'tx',
             'tx': tx,
-            'size': 10
+            'size': 1
         }
 
     def block(self, block):
@@ -29,7 +41,7 @@ class Message:
         return {
             'id': 'block',
             'block': block,
-            'size': 10
+            'size': 1
         }
 
     def get_data(self, hashes: list, _type: str):
@@ -39,7 +51,7 @@ class Message:
             'id': 'getdata',
             'type': _type,
             'hashes': hashes,
-            'size': 10
+            'size': 1
         }
 
     def get_headers(self, block_number: int, max_headers: int, reverse: int):
@@ -49,7 +61,7 @@ class Message:
             'block_number': block_number,
             'max_headers': max_headers,
             'reverse': reverse,
-            'size': 10
+            'size': 1
         }
 
     def headers(self, headers: list):
@@ -57,5 +69,5 @@ class Message:
         return {
             'id': 'headers',
             'headers': headers,
-            'size': 10
+            'size': 1
         }
