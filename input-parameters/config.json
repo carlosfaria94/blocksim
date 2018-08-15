@@ -1,5 +1,5 @@
 {
-  "blockchain": "bitcoin",
+  "blockchain": "ethereum",
   "locations": ["Tokyo", "Ohio", "Ireland"],
   "bitcoin": {
     "block_size_limit_mb": 1,
@@ -22,13 +22,12 @@
     "tx_gas_limit": 1000,
     "orphan_blocks_probability": 0.003,
     "message_size_kB": {
-      "status": 0.5,
-      "new_blocks": 0.1,
-      "transactions": 1,
-      "get_headers": 1,
-      "block_headers": 1,
-      "get_block_bodies": 1,
-      "block_bodies": 1
+      "status": 0.1,
+      "hash_size": 0.032,
+      "tx": 0.1,
+      "get_headers": 0.044,
+      "header": 0.08,
+      "block_bodies": 0.025
     }
   }
 }

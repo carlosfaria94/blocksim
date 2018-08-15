@@ -56,7 +56,7 @@ def report_node_chain(world, nodes_list):
 def set_simulation():
     now = int(time.time())
     # TODO: Create a func to user input only days and converts to seconds
-    duration = 72000
+    duration = 7200
     world = SimulationWorld(
         duration,
         now,
