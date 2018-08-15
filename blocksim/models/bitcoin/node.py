@@ -50,7 +50,7 @@ class BTCNode(Node):
         With this we can see the performance in different block size limits."""
         if self.is_mining is False:
             raise RuntimeError(f'Node {self.location} is not a miner')
-        block_size = self.env.config['bitcoin']['block_size_limit']
+        block_size = self.env.config['bitcoin']['block_size_limit_mb']
         transactions_per_block_dist = self.env.config[
             'bitcoin']['number_transactions_per_block']
         transactions_per_block = int(

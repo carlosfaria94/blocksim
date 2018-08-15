@@ -2,17 +2,33 @@
   "blockchain": "bitcoin",
   "locations": ["Tokyo", "Ohio", "Ireland"],
   "bitcoin": {
-    "block_size_limit": 1,
+    "block_size_limit_mb": 1,
     "number_transactions_per_block": {
       "name": "beta",
-      "parameters":
-        "(3.4538110963361333, 4.240939683805738, 705.4815204696233, 2159.387403502942)"
+      "parameters": "(3.4538110963361333, 4.240939683805738, 705.4815204696233, 2159.387403502942)"
     },
-    "orphan_blocks_probability": 0.003
+    "orphan_blocks_probability": 0.003,
+    "message_size_kB": {
+      "header": 0.024,
+      "version": 0.095,
+      "verack": 0,
+      "inv_vector": 0.036,
+      "tx": 0.44,
+      "block_base": 0.082
+    }
   },
   "ethereum": {
     "block_gas_limit": 100000,
     "tx_gas_limit": 1000,
-    "orphan_blocks_probability": 0.003
+    "orphan_blocks_probability": 0.003,
+    "message_size_kB": {
+      "status": 0.5,
+      "new_blocks": 0.1,
+      "transactions": 1,
+      "get_headers": 1,
+      "block_headers": 1,
+      "get_block_bodies": 1,
+      "block_bodies": 1
+    }
   }
 }

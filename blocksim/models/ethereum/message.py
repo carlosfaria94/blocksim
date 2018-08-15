@@ -6,8 +6,8 @@ class Message:
 
     def __init__(self, origin_node):
         self.origin_node = origin_node
-
-    # TODO: We need to calculate the real size for each message (we need to measure from a real network)
+        _env = origin_node.env
+        self._message_size = _env.config['ethereum']['message_size_kB']
 
     def status(self):
         """ Inform a peer of its current Ethereum state.
@@ -20,7 +20,7 @@ class Message:
             'td': self.origin_node.chain.head.header.difficulty,
             'best_hash': self.origin_node.chain.head.header.hash,
             'genesis_hash': self.origin_node.chain.genesis.header.hash,
-            'size': 10
+            'size': self._message_size['status']
         }
 
     def new_blocks(self, new_blocks: dict):
@@ -28,7 +28,7 @@ class Message:
         return {
             'id': 'new_blocks',
             'new_blocks': new_blocks,
-            'size': 10
+            'size': self._message_size['new_blocks']
         }
 
     def transactions(self, transactions: list):
@@ -39,7 +39,7 @@ class Message:
         return {
             'id': 'transactions',
             'transactions': transactions,
-            'size': 10
+            'size': self._message_size['transactions']
         }
 
     def get_headers(self, block_number: int, max_headers: int):
@@ -47,7 +47,7 @@ class Message:
             'id': 'get_headers',
             'block_number': block_number,
             'max_headers': max_headers,
-            'size': 10
+            'size': self._message_size['get_headers']
         }
 
     def block_headers(self, block_headers: list):
@@ -58,14 +58,14 @@ class Message:
         return {
             'id': 'block_headers',
             'block_headers': block_headers,
-            'size': 10
+            'size': self._message_size['block_headers']
         }
 
     def get_block_bodies(self, hashes: list):
         return {
             'id': 'get_block_bodies',
             'hashes': hashes,
-            'size': 10
+            'size': self._message_size['get_block_bodies']
         }
 
     def block_bodies(self, block_bodies: dict):
@@ -75,5 +75,5 @@ class Message:
         return {
             'id': 'block_bodies',
             'block_bodies': block_bodies,
-            'size': 10
+            'size': self._message_size['block_bodies']
         }

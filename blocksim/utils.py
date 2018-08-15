@@ -82,6 +82,10 @@ def time(env):
     return datetime.utcfromtimestamp(env.now).strftime('%m-%d %H:%M:%S')
 
 
+def kB_to_MB(value):
+    return value / 1000
+
+
 def get_random_values(distribution: dict, n=1):
     """Receives a `distribution` and outputs `n` random values
     Distribution format: { \'name\': str, \'parameters\': tuple }"""
