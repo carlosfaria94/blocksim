@@ -1,33 +1,9 @@
 import time
-import string
 from json import dumps as dump_json
-from random import randint, choices
 from world import SimulationWorld
 from node_factory import NodeFactory
+from transaction_factory import TransactionFactory
 from blocksim.models.network import Network
-from blocksim.models.transaction import Transaction
-from blocksim.models.ethereum.transaction import Transaction as ETHTransaction
-
-
-def broadcast_transactions(world, number_of_batches, transactions_per_batch, interval, nodes_list):
-    for i in range(number_of_batches):
-        transactions = []
-        for i in range(transactions_per_batch):
-            # Generate a random string to a transaction be distinct from others
-            rand_sign = ''.join(
-                choices(string.ascii_letters + string.digits, k=20))
-            if world.blockchain == 'bitcoin':
-                tx = Transaction('address', 'address', 140, rand_sign, 50)
-            elif world.blockchain == 'ethereum':
-                # TODO: Get startgas from a user input
-                tx = ETHTransaction('address', 'address',
-                                    140, rand_sign, i, 2, 10)
-            transactions.append(tx)
-        world.env.data['created_transactions'] += len(transactions)
-        # Choose a random node to broadcast the transaction
-        world.env.process(
-            nodes_list[randint(0, len(nodes_list)-1)].broadcast_transactions(transactions))
-        yield world.env.timeout(interval)
 
 
 def write_report(world):
@@ -53,10 +29,10 @@ def report_node_chain(world, nodes_list):
         }
 
 
-def set_simulation():
-    now = int(time.time())
-    # TODO: Create a func to user input only days and converts to seconds
-    duration = 7200
+def run_model():
+    now = int(time.time())  # Current time
+    duration = 7200  # 2 hours
+
     world = SimulationWorld(
         duration,
         now,
@@ -65,41 +41,41 @@ def set_simulation():
         'input-parameters/throughput-received.json',
         'input-parameters/throughput-sent.json',
         'input-parameters/delays.json')
-    run_model(world)
 
-
-def run_model(world):
     # Create the network
     network = Network(world.env, 'NetworkXPTO')
 
     miners = {
         'Ohio': {
-            'how_many': 2,
+            'how_many': 0,
             'mega_hashrate_range': "(20, 40)"
         },
         'Ireland': {
-            'how_many': 1,
+            'how_many': 2,
             'mega_hashrate_range': "(20, 40)"
         }
     }
     non_miners = {
-        'Ohio': {
-            'how_many': 2
+        'Tokyo': {
+            'how_many': 3
         },
         'Ireland': {
-            'how_many': 1
+            'how_many': 2
         }
     }
-    factory = NodeFactory(world, network)
+
+    node_factory = NodeFactory(world, network)
     # Create all nodes
-    nodes_list = factory.create_nodes(miners, non_miners)
+    nodes_list = node_factory.create_nodes(miners, non_miners)
     # Start the network heartbeat
     world.env.process(network.start_heartbeat())
     # Full Connect all nodes
     for node in nodes_list:
         node.connect(nodes_list)
 
-    world.env.process(broadcast_transactions(world, 5, 6, 300, nodes_list))
+    transaction_factory = TransactionFactory(world)
+    # Broadcast a batch of 6 transactions every 5 mins, 7 times. 42 Tx in total.
+    transaction_factory.broadcast(7, 6, 300, nodes_list)
 
     world.start_simulation()
 
@@ -108,4 +84,4 @@ def run_model(world):
 
 
 if __name__ == '__main__':
-    set_simulation()
+    run_model()

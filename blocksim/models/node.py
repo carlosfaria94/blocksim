@@ -51,6 +51,13 @@ class Node:
             # Ignore when a node is trying to connect to itself
             if node.address != self.address:
                 connection = Connection(self.env, self, node)
+
+                # Set the bases to monitor the block & TX propagation
+                self.env.data['block_propagation'].update({
+                    f'{self.address}_{node.address}': {}})
+                self.env.data['tx_propagation'].update({
+                    f'{self.address}_{node.address}': {}})
+
                 self.active_sessions[node.address] = {
                     'connection': connection,
                     'knownTxs': {''},
@@ -109,6 +116,32 @@ class Node:
             received_delay = get_received_delay(
                 self.env, message_size, origin_loc, dest_loc)
             yield self.env.timeout(received_delay)
+
+            # Monitor the transaction propagation on Ethereum
+            if envelope.msg['id'] == 'transactions':
+                tx_propagation = self.env.data['tx_propagation'][
+                    f'{envelope.origin.address}_{envelope.destination.address}']
+                txs = {}
+                for tx in envelope.msg['transactions']:
+                    initial_time = tx_propagation.get(tx.hash[:8], None)
+                    if initial_time is not None:
+                        propagation_time = self.env.now - initial_time
+                        txs.update({f'{tx.hash[:8]}': propagation_time})
+                self.env.data['tx_propagation'][f'{envelope.origin.address}_{envelope.destination.address}'].update(
+                    txs)
+            # Monitor the block propagation on Ethereum
+            if envelope.msg['id'] == 'block_bodies':
+                block_propagation = self.env.data['block_propagation'][
+                    f'{envelope.origin.address}_{envelope.destination.address}']
+                blocks = {}
+                for block_hash, _ in envelope.msg['block_bodies'].items():
+                    initial_time = block_propagation.get(block_hash[:8], None)
+                    if initial_time is not None:
+                        propagation_time = self.env.now - initial_time
+                        blocks.update({f'{block_hash[:8]}': propagation_time})
+                self.env.data['block_propagation'][f'{envelope.origin.address}_{envelope.destination.address}'].update(
+                    blocks)
+
             self._read_envelope(envelope)
 
     def send(self, destination_address: str, msg):
@@ -130,6 +163,22 @@ class Node:
             connection = node['connection']
             origin_node = connection.origin_node
             destination_node = connection.destination_node
+
+            # Monitor the transaction propagation on Ethereum
+            if msg['id'] == 'transactions':
+                txs = {}
+                for tx in msg['transactions']:
+                    txs.update({f'{tx.hash[:8]}': self.env.now})
+                self.env.data['tx_propagation'][f'{origin_node.address}_{destination_node.address}'].update(
+                    txs)
+            # Monitor the block propagation on Ethereum
+            if msg['id'] == 'new_blocks':
+                blocks = {}
+                for block_hash in msg['new_blocks']:
+                    blocks.update({f'{block_hash[:8]}': self.env.now})
+                self.env.data['block_propagation'][f'{origin_node.address}_{destination_node.address}'].update(
+                    blocks)
+
             upload_transmission_delay = get_sent_delay(
                 self.env, msg['size'], origin_node.location, destination_node.location)
             yield self.env.timeout(upload_transmission_delay)

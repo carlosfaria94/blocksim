@@ -5,6 +5,14 @@ from blocksim.models.ethereum.node import ETHNode
 
 
 class NodeFactory:
+    """ Responsible to create the nodes used during the simulation.
+    Depending on the blockchain being simulated, node factory will create nodes according
+    to the node model. The user can specify the location, number of miners and non-miners,
+    and the range of hash rate for the miner nodes. When nodes are created, is chosen a
+    random hash rate from the range inputed. The location of each node needs to be recognised
+    by the simulator, meaning that it needs to exist input parameters about latency and throughput.
+    """
+
     def __init__(self, world, network):
         self._world = world
         self._network = network

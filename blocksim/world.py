@@ -53,7 +53,9 @@ class SimulationWorld:
             'start_simulation_time': datetime.utcfromtimestamp(
                 self._initial_time).strftime('%m-%d %H:%M:%S'),
             'end_simulation_time': datetime.utcfromtimestamp(end_simulation).strftime('%m-%d %H:%M:%S'),
-            'created_transactions': 0
+            'created_transactions': 0,
+            'tx_propagation': {},
+            'block_propagation': {}
         }
 
     @property
