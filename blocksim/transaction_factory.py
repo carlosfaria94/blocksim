@@ -25,7 +25,6 @@ class TransactionFactory:
                 if self._world.blockchain == 'bitcoin':
                     tx = Transaction('address', 'address', 140, rand_sign, 50)
                 elif self._world.blockchain == 'ethereum':
-                    # TODO: Get startgas from a user input
                     tx = ETHTransaction('address', 'address',
                                         140, rand_sign, i, 2, 10)
                 transactions.append(tx)

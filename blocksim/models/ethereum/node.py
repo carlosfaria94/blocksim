@@ -19,15 +19,16 @@ class ETHNode(Node):
                  is_mining=False):
         # Create the Ethereum genesis block and init the chain
         genesis = Block(BlockHeader())
-        self.consensus = Consensus(env)
-        chain = Chain(env, self, self.consensus, genesis, BaseDB())
+        consensus = Consensus(env)
+        chain = Chain(env, self, consensus, genesis, BaseDB())
         self.hashrate = hashrate
         self.is_mining = is_mining
         super().__init__(env,
                          network,
                          location,
                          address,
-                         chain)
+                         chain,
+                         consensus)
         self.temp_headers = {}
         self.network_message = Message(self)
         if is_mining:
@@ -159,14 +160,8 @@ class ETHNode(Node):
             if self.is_mining:
                 self.transaction_queue.put(tx)
             else:
-                self.env.process(self._validate_tx(tx))
                 valid_transactions.append(tx)
         self.env.process(self.broadcast_transactions(valid_transactions))
-
-    def _validate_tx(self, tx):
-        # Calculates the delay to validate the tx
-        tx_validation_delay = self.consensus.validate_transaction()
-        yield self.env.timeout(tx_validation_delay)
 
     ##              ##
     ## Blocks       ##
@@ -268,3 +263,17 @@ class ETHNode(Node):
                     del self.temp_headers[block_hash]
                     print(
                         f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain  {new_block.header}')
+                print(self.env.now)
+
+    def _monitor_block(self, envelope):
+        # Monitor the block propagation on Ethereum
+        block_propagation = self.env.data['block_propagation'][
+            f'{envelope.origin.address}_{envelope.destination.address}']
+        blocks = {}
+        for block_hash, _ in envelope.msg['block_bodies'].items():
+            initial_time = block_propagation.get(block_hash[:8], None)
+            if initial_time is not None:
+                propagation_time = self.env.now - initial_time
+                blocks.update({f'{block_hash[:8]}': propagation_time})
+        self.env.data['block_propagation'][f'{envelope.origin.address}_{envelope.destination.address}'].update(
+            blocks)

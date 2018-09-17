@@ -1,6 +1,7 @@
 from collections import namedtuple
 from blocksim.models.network import Connection, Network
 from blocksim.models.chain import Chain
+from blocksim.models.consensus import Consensus
 from blocksim.utils import get_received_delay, get_sent_delay, get_latency_delay, time
 
 Envelope = namedtuple('Envelope', 'msg, timestamp, destination, origin')
@@ -30,12 +31,14 @@ class Node:
                  network: Network,
                  location: str,
                  address: str,
-                 chain: Chain):
+                 chain: Chain,
+                 consensus: Consensus):
         self.env = env
         self.network = network
         self.location = location
         self.address = address
         self.chain = chain
+        self.consensus = consensus
         self.active_sessions = {}
         self.connecting = None
         # Join the node to the network
@@ -151,9 +154,32 @@ class Node:
         active_connection = node['connection']
         origin_node = active_connection.origin_node
         destination_node = active_connection.destination_node
+
+        # Perform block validation before sending
+        # For Ethereum it performs validation when receives the header:
+        if msg['id'] == 'block_headers':
+            for header in msg['block_headers']:
+                delay = self.consensus.validate_block()
+                yield self.env.timeout(delay)
+        # For Bitcoin it performs validation when receives the full block:
+        if msg['id'] == 'block':
+            delay = self.consensus.validate_block()
+            yield self.env.timeout(delay)
+        # Perform transaction validation before sending
+        # For Ethereum:
+        if msg['id'] == 'transactions':
+            for tx in msg['transactions']:
+                delay = self.consensus.validate_transaction()
+                yield self.env.timeout(delay)
+        # For Bitcoin:
+        if msg['id'] == 'tx':
+            delay = self.consensus.validate_transaction()
+            yield self.env.timeout(delay)
+
         upload_transmission_delay = get_sent_delay(
             self.env, msg['size'], origin_node.location, destination_node.location)
         yield self.env.timeout(upload_transmission_delay)
+
         envelope = Envelope(msg, time(self.env), destination_node, origin_node)
         active_connection.put(envelope)
 

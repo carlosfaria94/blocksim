@@ -2,11 +2,11 @@
   "bitcoin": {
     "tx_validation": {
       "name": "lognorm",
-      "parameters": "(0.7615979985548762, 1, 2)"
+      "parameters": "(0.00049512563, 0.004892564, 0.0000425785)"
     },
     "block_validation": {
       "name": "lognorm",
-      "parameters": "(0.7615979985548762, 1, 2)"
+      "parameters": "(0.11269612563, 0.23958425545, 0.00264255485)"
     },
     "time_between_blocks_seconds": {
       "name": "norm",
@@ -16,11 +16,11 @@
   "ethereum": {
     "tx_validation": {
       "name": "lognorm",
-      "parameters": "(0.7615979985548762, 1, 2)"
+      "parameters": "(0.00035612523, 0.003896469, 0.0000521932)"
     },
     "block_validation": {
       "name": "lognorm",
-      "parameters": "(0.7615979985548762, 1, 2)"
+      "parameters": "(0.12449512563, 0.229892564, 0.0022425785)"
     },
     "time_between_blocks_seconds": {
       "name": "norm",

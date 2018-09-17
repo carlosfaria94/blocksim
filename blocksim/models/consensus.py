@@ -20,22 +20,16 @@ class Consensus:
         timestamp_diff = timestamp - parent.header.timestamp
         return int(parent.header.difficulty + timestamp_diff)
 
-    def apply_block(self, duration, state=None, block=None):
-        """ Simulates the block-level state transition function.
-        For now, it only applies a delay in simulation, corresponding to previous measurements"""
-        yield self.env.timeout(duration)
-
     def validate_block(self, block=None):
         """ Simulates the block validation.
         For now, it only applies a delay in simulation, corresponding to previous measurements"""
-        return round(get_random_values(self.env.delays['block_validation'])[0], 2)
-
-    def apply_transaction(self, duration, state=None, tx=None):
-        """ Simulates the transaction-level state transition function.
-        For now, it only applies a delay in simulation, corresponding to previous measurements"""
-        yield self.env.timeout(duration)
+        delay = round(get_random_values(
+            self.env.delays['block_validation'])[0], 4)
+        return delay
 
     def validate_transaction(self, tx=None):
         """ Simulates the transaction validation.
         For now, it only calculates a delay in simulation, corresponding to previous measurements"""
-        return round(get_random_values(self.env.delays['tx_validation'])[0], 2)
+        delay = round(get_random_values(
+            self.env.delays['tx_validation'])[0], 4)
+        return delay

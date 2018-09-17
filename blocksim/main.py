@@ -50,14 +50,14 @@ def run_model():
             'how_many': 0,
             'mega_hashrate_range': "(20, 40)"
         },
-        'Ireland': {
+        'Tokyo': {
             'how_many': 2,
             'mega_hashrate_range': "(20, 40)"
         }
     }
     non_miners = {
         'Tokyo': {
-            'how_many': 3
+            'how_many': 0
         },
         'Ireland': {
             'how_many': 2
@@ -75,7 +75,7 @@ def run_model():
 
     transaction_factory = TransactionFactory(world)
     # Broadcast a batch of 6 transactions every 5 mins, 7 times. 42 Tx in total.
-    transaction_factory.broadcast(7, 6, 300, nodes_list)
+    transaction_factory.broadcast(25, 6, 300, nodes_list)
 
     world.start_simulation()
 

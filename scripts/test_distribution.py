@@ -10,11 +10,11 @@ class Distribution(object):
         self.dist_results = []
         self.params = {}
 
-        self.DistributionName = ""
+        self.DistributionName = "norm"
         self.PValue = 0
-        self.Param = None
+        self.Param = (110.0275, 0.25834811785650774)
 
-        self.isFitted = False
+        self.isFitted = True
 
     def Fit(self, y):
         self.dist_results = []
@@ -71,35 +71,11 @@ def get_from_file(file_path):
 
 
 #x = get_from_file('')
-x = array([
-    71.61210000000001,
-    61.569,
-    57.412699999999994,
-    57.7704,
-    42.5415,
-    71.6106,
-    47.7335,
-    71.5817,
-    68.1327,
-    57.308099999999996,
-    69.0541,
-    39.4892,
-    44.491800000000005,
-    71.52860000000001,
-    50.057199999999995,
-    40.9096,
-    45.021699999999996,
-    71.5093,
-    49.683099999999996,
-    56.0166,
-    42.855,
-    64.12140000000001,
-    69.8463
-])
-print(x)
+#x = array([ ])
+# print(x)
 dst = Distribution()
-dst.Fit(x)
-rands = dst.Random(10000)
+# dst.Fit(x)
+rands = dst.Random(100)
 print(rands)
 for rand in rands:
     if rand < 0:

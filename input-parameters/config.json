@@ -7,7 +7,7 @@
       "name": "beta",
       "parameters": "(3.4538110963361333, 4.240939683805738, 705.4815204696233, 2159.387403502942)"
     },
-    "orphan_blocks_probability": 0.003,
+    "orphan_blocks_probability": 0.0174,
     "message_size_kB": {
       "header": 0.024,
       "version": 0.095,
@@ -20,14 +20,14 @@
   "ethereum": {
     "block_gas_limit": 100000,
     "tx_gas_limit": 1000,
-    "orphan_blocks_probability": 0.003,
+    "orphan_blocks_probability": 0.0174,
     "message_size_kB": {
-      "status": 0.1,
-      "hash_size": 0.032,
-      "tx": 0.1,
-      "get_headers": 0.044,
-      "header": 0.08,
-      "block_bodies": 0.025
+      "status": 0.2,
+      "hash_size": 0.042,
+      "tx": 0.2,
+      "get_headers": 0.054,
+      "header": 0.09,
+      "block_bodies": 0.045
     }
   }
 }

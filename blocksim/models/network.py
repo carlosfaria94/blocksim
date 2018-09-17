@@ -56,8 +56,6 @@ class Network:
                     self._list_nodes, 2, replace=False, p=self._list_probabilities)
                 for selected_node in selected_nodes:
                     self._build_new_block(selected_node)
-                    # Wait 2 seconds to next node build a new block
-                    yield self.env.timeout(2)
             else:
                 selected_node = scipy.random.choice(
                     self._list_nodes, 1, replace=False, p=self._list_probabilities)[0]

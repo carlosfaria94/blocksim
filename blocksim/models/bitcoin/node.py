@@ -19,15 +19,16 @@ class BTCNode(Node):
                  is_mining=False):
         # Create the Bitcoin genesis block and init the chain
         genesis = Block(BlockHeader())
-        self.consensus = Consensus(env)
-        chain = Chain(env, self, self.consensus, genesis, BaseDB())
+        consensus = Consensus(env)
+        chain = Chain(env, self, consensus, genesis, BaseDB())
         self.hashrate = hashrate
         self.is_mining = is_mining
         super().__init__(env,
                          network,
                          location,
                          address,
-                         chain)
+                         chain,
+                         consensus)
         self.temp_txs = {}
         self.tx_on_transit = {}
         self.network_message = Message(self)
@@ -167,9 +168,6 @@ class BTCNode(Node):
                     print(
                         f'{self.address} at {time(self.env)}: Transaction {tx.hash[:8]} was already sent to {node_address}')
                 else:
-                    # Calculates the delay to validate the tx
-                    tx_validation_delay = self.consensus.validate_transaction()
-                    yield self.env.timeout(tx_validation_delay)
                     self._mark_transaction(tx.hash, node_address)
                     transactions_hashes.append(tx.hash)
         # Only send if it has transactions hashes
@@ -211,14 +209,7 @@ class BTCNode(Node):
         del self.tx_on_transit[tx.hash]
         if self.is_mining:
             self.transaction_queue.put(tx)
-        else:
-            self.env.process(self._validate_tx(tx))
         self.env.process(self.broadcast_transactions([tx]))
-
-    def _validate_tx(self, tx):
-        # Calculates the delay to validate the tx
-        tx_validation_delay = self.consensus.validate_transaction()
-        yield self.env.timeout(tx_validation_delay)
 
     ##              ##
     ## Blocks       ##

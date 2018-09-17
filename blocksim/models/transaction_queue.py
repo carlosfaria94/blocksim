@@ -11,15 +11,9 @@ class TransactionQueue():
         key = f'{node.address}_number_of_transactions_queue'
         self._env.data[key] = 0
 
-    def validate_tx(self, tx):
-        # Calculates the delay to validate the tx
-        tx_validation_delay = self._consensus.validate_transaction()
-        yield self._env.timeout(tx_validation_delay)
-
     def put(self, tx):
         key = f'{self._node.address}_number_of_transactions_queue'
         self._env.data[key] += 1
-        self._env.process(self.validate_tx(tx))
         # TODO: Order the list according to the fee
         self._transaction_queue.append(tx)
         print(
