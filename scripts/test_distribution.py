@@ -10,11 +10,11 @@ class Distribution(object):
         self.dist_results = []
         self.params = {}
 
-        self.DistributionName = "norm"
+        self.DistributionName = ""
         self.PValue = 0
-        self.Param = (110.0275, 0.25834811785650774)
+        self.Param = None
 
-        self.isFitted = True
+        self.isFitted = False
 
     def Fit(self, y):
         self.dist_results = []
