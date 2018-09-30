@@ -84,13 +84,16 @@ class Message:
     def block_bodies(self, block_bodies: dict):
         """ Reply to `get_block_bodies`. The items in the list are some of the blocks, minus the header.
         This may contain no items if no blocks were able to be returned for the `get_block_bodies` message.
-
-        We assume an average of 25 Bytes for each block: https://etherscan.io/chart/blocksize
         """
-        block_bodies_size = len(block_bodies) * \
-            self._message_size['block_bodies']
+        txsCount = 0
+        for block_hash, block_txs in block_bodies.items():
+            txsCount += len(block_txs)
+        message_size = (
+            txsCount * self._message_size['tx']) + self._message_size['block_bodies']
+        print(
+            f'block bodies with {txsCount} txs have a message size: {message_size} kB')
         return {
             'id': 'block_bodies',
             'block_bodies': block_bodies,
-            'size': kB_to_MB(block_bodies_size)
+            'size': kB_to_MB(message_size)
         }

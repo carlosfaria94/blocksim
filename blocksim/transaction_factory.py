@@ -25,8 +25,9 @@ class TransactionFactory:
                 if self._world.blockchain == 'bitcoin':
                     tx = Transaction('address', 'address', 140, rand_sign, 50)
                 elif self._world.blockchain == 'ethereum':
+                    gas_limit = self._world.env.config['ethereum']['tx_gas_limit']
                     tx = ETHTransaction('address', 'address',
-                                        140, rand_sign, i, 2, 10)
+                                        140, rand_sign, i, 2, gas_limit)
                 transactions.append(tx)
             self._world.env.data['created_transactions'] += len(transactions)
             # Choose a random node to broadcast the transaction

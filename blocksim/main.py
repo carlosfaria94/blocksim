@@ -31,7 +31,7 @@ def report_node_chain(world, nodes_list):
 
 def run_model():
     now = int(time.time())  # Current time
-    duration = 7200  # 2 hours
+    duration = 1800  # seconds
 
     world = SimulationWorld(
         duration,
@@ -74,8 +74,7 @@ def run_model():
         node.connect(nodes_list)
 
     transaction_factory = TransactionFactory(world)
-    # Broadcast a batch of 6 transactions every 5 mins, 7 times. 42 Tx in total.
-    transaction_factory.broadcast(25, 6, 300, nodes_list)
+    transaction_factory.broadcast(300, 100, 20, nodes_list)
 
     world.start_simulation()
 

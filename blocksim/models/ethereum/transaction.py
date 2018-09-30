@@ -11,7 +11,7 @@ class Transaction(BaseTransaction):
     :param signature: sender signature
     :param int nonce: sequence number, issued by the originating EOA, used to prevent message replay
     :param gasprice: price of gas (in wei) the originator is willing to pay
-    :param startgas: maximum amount of gas the originator is willing to pay, also known as gaslimit
+    :param startgas: or gas limit is the maximum amount of gas the originator is willing to pay
 
     """
 
