@@ -263,7 +263,6 @@ class ETHNode(Node):
                     del self.temp_headers[block_hash]
                     print(
                         f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain  {new_block.header}')
-                print(self.env.now)
 
     def _monitor_block(self, envelope):
         # Monitor the block propagation on Ethereum

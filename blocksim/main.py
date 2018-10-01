@@ -31,7 +31,7 @@ def report_node_chain(world, nodes_list):
 
 def run_model():
     now = int(time.time())  # Current time
-    duration = 1800  # seconds
+    duration = 3600  # seconds
 
     world = SimulationWorld(
         duration,
