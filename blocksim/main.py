@@ -60,7 +60,7 @@ def run_model():
             'how_many': 0
         },
         'Ireland': {
-            'how_many': 2
+            'how_many': 1
         }
     }
 
@@ -74,7 +74,7 @@ def run_model():
         node.connect(nodes_list)
 
     transaction_factory = TransactionFactory(world)
-    transaction_factory.broadcast(300, 100, 20, nodes_list)
+    transaction_factory.broadcast(100, 10, 25, nodes_list)
 
     world.start_simulation()
 

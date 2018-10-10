@@ -17,7 +17,7 @@
     "Ireland": {
       "Tokyo": {
         "name": "norm",
-        "parameters": "(110.0275, 0.25834811785650774)"
+        "parameters": "(105.4275, 0.25834811785650774)"
       },
       "Ireland": {
         "name": "invgamma",
@@ -25,7 +25,7 @@
       },
       "Ohio": {
         "name": "norm",
-        "parameters": "(84.6995, 0.19583092197097127)"
+        "parameters": "(73.6995, 0.19583092197097127)"
       }
     },
     "Ohio": {
@@ -35,7 +35,7 @@
       },
       "Ireland": {
         "name": "norm",
-        "parameters": "(84.6995, 0.19583092197097127)"
+        "parameters": "(73.6995, 0.19583092197097127)"
       },
       "Ohio": {
         "name": "invgamma",
