@@ -133,15 +133,17 @@ class Node:
                 self.env.data['tx_propagation'][f'{envelope.origin.address}_{envelope.destination.address}'].update(
                     txs)
             # Monitor the block propagation on Ethereum
-            if envelope.msg['id'] == 'block_bodies':
+            if envelope.msg['id'] == 'blocks':
                 block_propagation = self.env.data['block_propagation'][
                     f'{envelope.origin.address}_{envelope.destination.address}']
                 blocks = {}
-                for block_hash, _ in envelope.msg['block_bodies'].items():
-                    initial_time = block_propagation.get(block_hash[:8], None)
+                for block in envelope.msg['blocks']:
+                    initial_time = block_propagation.get(
+                        block.header.hash[:8], None)
                     if initial_time is not None:
                         propagation_time = self.env.now - initial_time
-                        blocks.update({f'{block_hash[:8]}': propagation_time})
+                        blocks.update(
+                            {f'{block.header.hash[:8]}': propagation_time})
                 self.env.data['block_propagation'][f'{envelope.origin.address}_{envelope.destination.address}'].update(
                     blocks)
 

@@ -52,48 +52,31 @@ class Message:
             'size': kB_to_MB(transactions_size)
         }
 
-    def get_headers(self, block_number: int, max_headers: int):
-        return {
-            'id': 'get_headers',
-            'block_number': block_number,
-            'max_headers': max_headers,
-            'size': kB_to_MB(self._message_size['get_headers'])
-        }
-
-    def block_headers(self, block_headers: list):
-        """ Reply to `get_headers` the items in the list are block headers.
-        This may contain no block headers if no block headers were able to be returned
-        for the `get_headers` message.
-        """
-        num_headers = len(block_headers)
-        block_headers_size = num_headers * self._message_size['header']
-        return {
-            'id': 'block_headers',
-            'block_headers': block_headers,
-            'size': kB_to_MB(block_headers_size)
-        }
-
-    def get_block_bodies(self, hashes: list):
+    def get_blocks(self, hashes: list):
         block_bodies_size = len(hashes) * self._message_size['hash_size']
         return {
-            'id': 'get_block_bodies',
+            'id': 'get_blocks',
             'hashes': hashes,
             'size': kB_to_MB(block_bodies_size)
         }
 
-    def block_bodies(self, block_bodies: dict):
-        """ Reply to `get_block_bodies`. The items in the list are some of the blocks, minus the header.
-        This may contain no items if no blocks were able to be returned for the `get_block_bodies` message.
+    def blocks(self, blocks: list):
+        """ Reply to `get_blocks`. The items in the list are some of the blocks requested.
+        This may contain no items if no blocks were able to be returned for the `get_blocks` message.
         """
-        txsCount = 0
-        for block_hash, block_txs in block_bodies.items():
-            txsCount += len(block_txs)
-        message_size = (
-            txsCount * self._message_size['tx']) + self._message_size['block_bodies']
+        txs_count = 0
+        for block in blocks:
+            txs_count += block.transaction_count
+        # Calculate the size for each tx in each block, block bodie and header
+        msg_total_txs_size = txs_count * self._message_size['tx']
+        msg_block_bodies_size = len(
+            blocks) * self._message_size['block_bodies']
+        msg_block_header_size = len(blocks) * self._message_size['header']
+        message_size = msg_total_txs_size + msg_block_bodies_size + msg_block_header_size
         print(
-            f'block bodies with {txsCount} txs have a message size: {message_size} kB')
+            f'Blocks Message with {len(blocks)} blocks; {txs_count} txs; have a message size: {message_size} kB')
         return {
-            'id': 'block_bodies',
-            'block_bodies': block_bodies,
+            'id': 'blocks',
+            'blocks': blocks,
             'size': kB_to_MB(message_size)
         }
