@@ -29,7 +29,6 @@ class ETHNode(Node):
                          address,
                          chain,
                          consensus)
-        self.temp_headers = {}
         self.network_message = Message(self)
         if is_mining:
             # Transaction Queue to store the transactions
@@ -95,10 +94,6 @@ class ETHNode(Node):
             self._send_block_headers(envelope)
         if envelope.msg['id'] == 'block_headers':
             self._receive_block_headers(envelope)
-        if envelope.msg['id'] == 'get_block_bodies':
-            self._send_block_bodies(envelope)
-        if envelope.msg['id'] == 'block_bodies':
-            self._receive_block_bodies(envelope)
 
     ##              ##
     ## Handshake    ##
@@ -219,47 +214,8 @@ class ETHNode(Node):
 
     def _receive_block_headers(self, envelope):
         """Handle block headers received"""
-        block_headers = envelope.msg.get('block_headers')
-        # Save the header in a temporary list
-        hashes = []
-        for header in block_headers:
-            self.temp_headers[header.hash] = header
-            hashes.append(header.hash)
-        self.request_bodies(hashes, envelope.origin.address)
-
-    def request_bodies(self, hashes: list, destination_address: str):
-        """Request a node (identified by the `destination_address`) to return block bodies.
-        Specify a list of `hashes` that we're interested in.
-        """
-        get_block_bodies_msg = self.network_message.get_block_bodies(hashes)
-        self.env.process(self.send(destination_address, get_block_bodies_msg))
-
-    def _send_block_bodies(self, envelope):
-        """Send block bodies for any node that request it, identified by the `envelope.origin.address`.
-
-        In `envelope.msg.hashes` we obtain a list of hashes of block bodies being requested.
-        """
-        block_bodies = {}
-        for block_hash in envelope.msg.get('hashes'):
-            block = self.chain.get_block(block_hash)
-            block_bodies[block.header.hash] = block.transactions
-        print(
-            f'{self.address} at {time(self.env)}: {len(block_bodies)} Block bodies(s) preapred to send')
-        block_bodies_msg = self.network_message.block_bodies(block_bodies)
-        self.env.process(self.send(envelope.origin.address, block_bodies_msg))
-
-    def _receive_block_bodies(self, envelope):
-        """Handle block bodies received
-        Assemble the block header in a temporary list with the block body received and
-        insert it in the blockchain"""
-        block_hashes = []
-        block_bodies = envelope.msg.get('block_bodies')
-        for block_hash, block_txs in block_bodies.items():
-            block_hashes.append(block_hash[:8])
-            if block_hash in self.temp_headers:
-                header = self.temp_headers.get(block_hash)
-                new_block = Block(header, block_txs)
-                if self.chain.add_block(new_block):
-                    del self.temp_headers[block_hash]
-                    print(
-                        f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain  {new_block.header}')
+        for header in envelope.msg.get('block_headers'):
+            new_block = Block(header)
+            if self.chain.add_block(new_block):
+                print(
+                    f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain  {new_block.header}')
