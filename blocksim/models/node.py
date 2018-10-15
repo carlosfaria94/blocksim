@@ -159,8 +159,8 @@ class Node:
 
         # Perform block validation before sending
         # For Ethereum it performs validation when receives the header:
-        if msg['id'] == 'block_headers':
-            for header in msg['block_headers']:
+        if msg['id'] == 'blocks':
+            for blocks in msg['blocks']:
                 delay = self.consensus.validate_block()
                 yield self.env.timeout(delay)
         # For Bitcoin it performs validation when receives the full block:
