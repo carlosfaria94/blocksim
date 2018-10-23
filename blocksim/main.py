@@ -57,7 +57,7 @@ def run_model():
     }
     non_miners = {
         'Tokyo': {
-            'how_many': 0
+            'how_many': 1
         },
         'Ireland': {
             'how_many': 1
@@ -74,7 +74,7 @@ def run_model():
         node.connect(nodes_list)
 
     transaction_factory = TransactionFactory(world)
-    transaction_factory.broadcast(100, 10, 25, nodes_list)
+    transaction_factory.broadcast(100, 400, 15, nodes_list)
 
     world.start_simulation()
 

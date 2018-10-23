@@ -263,16 +263,3 @@ class ETHNode(Node):
                     del self.temp_headers[block_hash]
                     print(
                         f'{self.address} at {time(self.env)}: Block assembled and added to the tip of the chain  {new_block.header}')
-
-    def _monitor_block(self, envelope):
-        # Monitor the block propagation on Ethereum
-        block_propagation = self.env.data['block_propagation'][
-            f'{envelope.origin.address}_{envelope.destination.address}']
-        blocks = {}
-        for block_hash, _ in envelope.msg['block_bodies'].items():
-            initial_time = block_propagation.get(block_hash[:8], None)
-            if initial_time is not None:
-                propagation_time = self.env.now - initial_time
-                blocks.update({f'{block_hash[:8]}': propagation_time})
-        self.env.data['block_propagation'][f'{envelope.origin.address}_{envelope.destination.address}'].update(
-            blocks)
