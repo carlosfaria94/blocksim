@@ -1,0 +1,4 @@
+simpy == 3.0.11
+schema
+scipy <= 1.3.3
+pysha3
